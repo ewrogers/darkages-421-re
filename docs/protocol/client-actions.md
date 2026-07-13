@@ -2,7 +2,7 @@
 
 This index records every fixed action byte placed in a logical client packet before `net_c_queue_send`. The send-site addresses are the calls that submit the completed byte array.
 
-For per-message logical shapes, containing function names, and queue call sites, use the [Client Message Directory](client-messages.md).
+Each message name in the index links to a dedicated page containing its payload format, queue call sites, and current schema status. Message-page offsets are payload-relative and exclude framing, action, sequence, and the trailing zero.
 
 The `C...` names are direction-prefixed reference names supplied from later-client dumps. They are not RTTI or symbols recovered from the Stone executable, and a matching action value does not by itself establish that the later payload schema is identical. Each row separately records what is established in the 4.21 code. The supplied later-client list matches all 51 fixed action values found in Stone, with no additional fixed client action found. The spelling `CNewUserApperance` is preserved from the supplied name.
 
@@ -10,59 +10,59 @@ All entries use the client-to-server direction. The send queue appends a zero se
 
 ## Fixed action index
 
-| Action | Message name | Stone send sites and established notes |
-|---:|---|---|
-| `0x00` | `CVersion` | `Darkages.exe:0x004AD6A3`. Logical fields are action, a big-endian data-version `uint16_t`, and ASCII `LK`; the builder submits 5 bytes before the send queue adds the sentinel. XOR bypass. The later-client scope is lobby or login. |
-| `0x02` | `CNewUser` | `Darkages.exe:0x00462730`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
-| `0x03` | `CLogin` | `Darkages.exe:0x00462D2F`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
-| `0x04` | `CNewUserApperance` | `Darkages.exe:0x00461725`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
-| `0x05` | `CMapRequest` | `Darkages.exe:0x00465D7A`. Stone payload semantics not yet independently established. |
-| `0x06` | `CMove` | `Darkages.exe:0x0048853A`. Stone payload semantics not yet independently established. |
-| `0x07` | `CGet` | `Darkages.exe:0x00454213`. Stone payload semantics not yet independently established. |
-| `0x08` | `CDrop` | `Darkages.exe:0x004530AE`. Stone payload semantics not yet independently established. |
-| `0x0B` | `CQuit` | `Darkages.exe:0x0046471C`, `Darkages.exe:0x004889DC`, `Darkages.exe:0x00488E2E`, `Darkages.exe:0x004922B1`, `Darkages.exe:0x0049236B`, `Darkages.exe:0x0049544D`. |
-| `0x0C` | `CPutGround` | `Darkages.exe:0x0046B1C2`. Stone payload semantics not yet independently established. |
-| `0x0D` | `CBlockListen` | `Darkages.exe:0x004C1691`, `Darkages.exe:0x004C1956`, `Darkages.exe:0x004C1A66`. |
-| `0x0E` | `CSay` | `Darkages.exe:0x004811F1`, `Darkages.exe:0x00482DA9`, `Darkages.exe:0x0048865F`, `Darkages.exe:0x004C0987`. |
-| `0x10` | `CTransferServer` | `Darkages.exe:0x00460617`, `Darkages.exe:0x00463119`, `Darkages.exe:0x0046C901`. A `MapPane::ProcessTransferServer` diagnostic names `kClientTransferServer`; this is the only action allowed while the Socket transfer gate is active. XOR bypass. |
-| `0x11` | `CChangeDirection` | `Darkages.exe:0x0046822F`, `Darkages.exe:0x004884D4`. |
-| `0x13` | `CAttack` | `Darkages.exe:0x0048895C`. Stone payload semantics not yet independently established. |
-| `0x18` | `CWho` | `Darkages.exe:0x0043E39C`. Stone payload semantics not yet independently established. |
-| `0x19` | `CWhisper` | `Darkages.exe:0x004C1182`. Stone payload semantics not yet independently established. |
-| `0x1B` | `CUserSetting` | `Darkages.exe:0x00491AC4`. Stone payload semantics not yet independently established. |
-| `0x1C` | `CUse` | `Darkages.exe:0x004533C6`. Stone payload semantics not yet independently established. |
-| `0x1D` | `CEmotion` | `Darkages.exe:0x00488694`. Stone payload semantics not yet independently established. |
-| `0x23` | `CExitEditingMode` | `Darkages.exe:0x00493C99`, `Darkages.exe:0x0049421C`. The later-client context is paper editing. |
-| `0x24` | `CDropGold` | `Darkages.exe:0x004534E1`. Stone payload semantics not yet independently established. |
-| `0x26` | `CChangePassword` | `Darkages.exe:0x00463A45`, `Darkages.exe:0x004642F0`. The later-client scope is lobby or login. |
-| `0x29` | `CGive` | `Darkages.exe:0x0045336A`. Stone payload semantics not yet independently established. |
-| `0x2A` | `CGiveGold` | `Darkages.exe:0x0045360B`. Stone payload semantics not yet independently established. |
-| `0x2D` | `CSelfLook` | `Darkages.exe:0x0043D4DC`. Stone payload semantics not yet independently established. |
-| `0x2E` | `CGroup` | `Darkages.exe:0x004306AE`. Stone payload semantics not yet independently established. |
-| `0x2F` | `CGroupToggle` | `Darkages.exe:0x0042F1D0`. Stone payload semantics not yet independently established. |
-| `0x30` | `CChangeSlot` | `Darkages.exe:0x0042499F`, `Darkages.exe:0x00441216`, `Darkages.exe:0x004427DF`, `Darkages.exe:0x0044395F`. |
-| `0x38` | `CRefreshUser` | `Darkages.exe:0x00488110`. Stone payload semantics not yet independently established. |
-| `0x39` | `CMenuCode` | `Darkages.exe:0x0047B8CD`, `Darkages.exe:0x0047BBB7`, `Darkages.exe:0x0047C175`, `Darkages.exe:0x0047C2CF`, `Darkages.exe:0x0047C60F`, `Darkages.exe:0x0047C8C8`, `Darkages.exe:0x0047D3BF`, `Darkages.exe:0x0047D46D`, `Darkages.exe:0x0047D7DC`. |
-| `0x3A` | `CMessage` | `Darkages.exe:0x0047E85C`, `Darkages.exe:0x0047F9AC`, `Darkages.exe:0x0047FA89`, `Darkages.exe:0x004805CC`, `Darkages.exe:0x004806A9`, `Darkages.exe:0x0048113C`, `Darkages.exe:0x004812AE`, `Darkages.exe:0x00481EEC`, `Darkages.exe:0x0048205B`, `Darkages.exe:0x00482B5C`, `Darkages.exe:0x00482F1C`. |
-| `0x3B` | `CBulletin` | `Darkages.exe:0x0040ECE1`, `Darkages.exe:0x004109EC`, `Darkages.exe:0x0041294C`, `Darkages.exe:0x004145B4`, `Darkages.exe:0x00415738`, `Darkages.exe:0x00415934`, `Darkages.exe:0x0041715C`, `Darkages.exe:0x0041817E`, `Darkages.exe:0x004187E8`, `Darkages.exe:0x0041A73C`, `Darkages.exe:0x0041AE45`, `Darkages.exe:0x0041B4E4`, `Darkages.exe:0x0041B60B`, `Darkages.exe:0x0041B8A8`, `Darkages.exe:0x0041BA1B`. |
-| `0x3C` | `CPutToContainer` | `Darkages.exe:0x00424B24`. Stone payload semantics not yet independently established. |
-| `0x3D` | `CGetFromContainer` | `Darkages.exe:0x004412D8`, `Darkages.exe:0x00453A15`. |
-| `0x3E` | `CUseSkill` | `Darkages.exe:0x00454C96`. Stone payload semantics not yet independently established. |
-| `0x3F` | `CFieldMap` | `Darkages.exe:0x0043953A`. Stone payload semantics not yet independently established. |
-| `0x41` | `CGetParcel` | `Darkages.exe:0x00494E2C`. Stone payload semantics not yet independently established. |
-| `0x42` | `CException` | `Darkages.exe:0x00434B43`. Stone payload semantics not yet independently established. |
-| `0x43` | `CRequestObjectInfo` | `Darkages.exe:0x0047B755`, `Darkages.exe:0x00488723`, `Darkages.exe:0x0048C820`, `Darkages.exe:0x0048F17F`. |
-| `0x44` | `CRemoveEquip` | `Darkages.exe:0x0042F8E2`. Stone payload semantics not yet independently established. |
-| `0x45` | `CReplyCRC` | `Darkages.exe:0x00465522`. Stone payload semantics not yet independently established. |
-| `0x46` | `CGroupView` | `Darkages.exe:0x0042F919`. Stone payload semantics not yet independently established. |
-| `0x47` | `CAddStat` | `Darkages.exe:0x0044028E`. Stone payload semantics not yet independently established. |
-| `0x48` | `CRequestPatch` | `Darkages.exe:0x0048763C`, `Darkages.exe:0x004953EC`, `Darkages.exe:0x00495F55`, `Darkages.exe:0x0049609D`. XOR bypass. The later-client scope may be lobby or login. |
-| `0x4A` | `CExchange` | `Darkages.exe:0x0043071A`, `Darkages.exe:0x0043596E`, `Darkages.exe:0x00435A5A`, `Darkages.exe:0x00435ACA`, `Darkages.exe:0x00435E90`, `Darkages.exe:0x00437310`, `Darkages.exe:0x00437AE8`. |
-| `0x4D` | `CSpellDelayRequest` | `Darkages.exe:0x00455CDF`. Stone payload semantics not yet independently established. |
-| `0x4E` | `CSpellDelaySay` | Direct sites `Darkages.exe:0x004548F1` and `Darkages.exe:0x00455921`; indirect submissions at `Darkages.exe:0x00455815` and `Darkages.exe:0x00456997` use the action `0x4E` builder at `Darkages.exe:0x00455834`. |
-| `0x4F` | `CSendPortrait` | `Darkages.exe:0x0040A7E3`. `net_c_build_portrait_response` reads and validates the local portrait and includes its bytes in the response to server action `0x49`. |
-| `0x57` | `CMulti` | `Darkages.exe:0x004A29D7`, `Darkages.exe:0x004A2EB0`. |
-| `0x62` | literal `baram` | `Darkages.exe:0x004AD50B`. The five submitted logical bytes are the literal ASCII string `baram`, so byte zero is action `0x62`. No later-client `C...` class name is established for this special packet. |
+| Action | Message name | Encrypted | 4.21 send sites and notes |
+|---:|---|---|---|
+| `0x00` | [`CVersion`](client/000-00-version.md) | No | `Darkages.exe:0x004AD6A3`. The four-byte payload is a big-endian data-version `uint16_t` followed by ASCII `LK`. XOR bypass. The later-client scope is lobby or login. |
+| `0x02` | [`CNewUser`](client/002-02-new-user.md) | Yes | `Darkages.exe:0x00462730`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
+| `0x03` | [`CLogin`](client/003-03-login.md) | Yes | `Darkages.exe:0x00462D2F`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
+| `0x04` | [`CNewUserApperance`](client/004-04-new-user-apperance.md) | Yes | `Darkages.exe:0x00461725`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
+| `0x05` | [`CMapRequest`](client/005-05-map-request.md) | Yes | `Darkages.exe:0x00465D7A`. Stone payload semantics not yet independently established. |
+| `0x06` | [`CMove`](client/006-06-move.md) | Yes | `Darkages.exe:0x0048853A`. Stone payload semantics not yet independently established. |
+| `0x07` | [`CGet`](client/007-07-get.md) | Yes | `Darkages.exe:0x00454213`. Stone payload semantics not yet independently established. |
+| `0x08` | [`CDrop`](client/008-08-drop.md) | Yes | `Darkages.exe:0x004530AE`. Stone payload semantics not yet independently established. |
+| `0x0B` | [`CQuit`](client/011-0b-quit.md) | Yes | `Darkages.exe:0x0046471C`, `Darkages.exe:0x004889DC`, `Darkages.exe:0x00488E2E`, `Darkages.exe:0x004922B1`, `Darkages.exe:0x0049236B`, `Darkages.exe:0x0049544D`. |
+| `0x0C` | [`CPutGround`](client/012-0c-put-ground.md) | Yes | `Darkages.exe:0x0046B1C2`. Stone payload semantics not yet independently established. |
+| `0x0D` | [`CBlockListen`](client/013-0d-block-listen.md) | Yes | `Darkages.exe:0x004C1691`, `Darkages.exe:0x004C1956`, `Darkages.exe:0x004C1A66`. |
+| `0x0E` | [`CSay`](client/014-0e-say.md) | Yes | `Darkages.exe:0x004811F1`, `Darkages.exe:0x00482DA9`, `Darkages.exe:0x0048865F`, `Darkages.exe:0x004C0987`. |
+| `0x10` | [`CTransferServer`](client/016-10-transfer-server.md) | No | `Darkages.exe:0x00460617`, `Darkages.exe:0x00463119`, `Darkages.exe:0x0046C901`. A `MapPane::ProcessTransferServer` diagnostic names `kClientTransferServer`; this is the only action allowed while the Socket transfer gate is active. XOR bypass. |
+| `0x11` | [`CChangeDirection`](client/017-11-change-direction.md) | Yes | `Darkages.exe:0x0046822F`, `Darkages.exe:0x004884D4`. |
+| `0x13` | [`CAttack`](client/019-13-attack.md) | Yes | `Darkages.exe:0x0048895C`. Stone payload semantics not yet independently established. |
+| `0x18` | [`CWho`](client/024-18-who.md) | Yes | `Darkages.exe:0x0043E39C`. Stone payload semantics not yet independently established. |
+| `0x19` | [`CWhisper`](client/025-19-whisper.md) | Yes | `Darkages.exe:0x004C1182`. Stone payload semantics not yet independently established. |
+| `0x1B` | [`CUserSetting`](client/027-1b-user-setting.md) | Yes | `Darkages.exe:0x00491AC4`. Stone payload semantics not yet independently established. |
+| `0x1C` | [`CUse`](client/028-1c-use.md) | Yes | `Darkages.exe:0x004533C6`. Stone payload semantics not yet independently established. |
+| `0x1D` | [`CEmotion`](client/029-1d-emotion.md) | Yes | `Darkages.exe:0x00488694`. Stone payload semantics not yet independently established. |
+| `0x23` | [`CExitEditingMode`](client/035-23-exit-editing-mode.md) | Yes | `Darkages.exe:0x00493C99`, `Darkages.exe:0x0049421C`. The later-client context is paper editing. |
+| `0x24` | [`CDropGold`](client/036-24-drop-gold.md) | Yes | `Darkages.exe:0x004534E1`. Stone payload semantics not yet independently established. |
+| `0x26` | [`CChangePassword`](client/038-26-change-password.md) | Yes | `Darkages.exe:0x00463A45`, `Darkages.exe:0x004642F0`. The later-client scope is lobby or login. |
+| `0x29` | [`CGive`](client/041-29-give.md) | Yes | `Darkages.exe:0x0045336A`. Stone payload semantics not yet independently established. |
+| `0x2A` | [`CGiveGold`](client/042-2a-give-gold.md) | Yes | `Darkages.exe:0x0045360B`. Stone payload semantics not yet independently established. |
+| `0x2D` | [`CSelfLook`](client/045-2d-self-look.md) | Yes | `Darkages.exe:0x0043D4DC`. Stone payload semantics not yet independently established. |
+| `0x2E` | [`CGroup`](client/046-2e-group.md) | Yes | `Darkages.exe:0x004306AE`. Stone payload semantics not yet independently established. |
+| `0x2F` | [`CGroupToggle`](client/047-2f-group-toggle.md) | Yes | `Darkages.exe:0x0042F1D0`. Stone payload semantics not yet independently established. |
+| `0x30` | [`CChangeSlot`](client/048-30-change-slot.md) | Yes | `Darkages.exe:0x0042499F`, `Darkages.exe:0x00441216`, `Darkages.exe:0x004427DF`, `Darkages.exe:0x0044395F`. |
+| `0x38` | [`CRefreshUser`](client/056-38-refresh-user.md) | Yes | `Darkages.exe:0x00488110`. Stone payload semantics not yet independently established. |
+| `0x39` | [`CMenuCode`](client/057-39-menu-code.md) | Yes | `Darkages.exe:0x0047B8CD`, `Darkages.exe:0x0047BBB7`, `Darkages.exe:0x0047C175`, `Darkages.exe:0x0047C2CF`, `Darkages.exe:0x0047C60F`, `Darkages.exe:0x0047C8C8`, `Darkages.exe:0x0047D3BF`, `Darkages.exe:0x0047D46D`, `Darkages.exe:0x0047D7DC`. |
+| `0x3A` | [`CMessage`](client/058-3a-message.md) | Yes | `Darkages.exe:0x0047E85C`, `Darkages.exe:0x0047F9AC`, `Darkages.exe:0x0047FA89`, `Darkages.exe:0x004805CC`, `Darkages.exe:0x004806A9`, `Darkages.exe:0x0048113C`, `Darkages.exe:0x004812AE`, `Darkages.exe:0x00481EEC`, `Darkages.exe:0x0048205B`, `Darkages.exe:0x00482B5C`, `Darkages.exe:0x00482F1C`. |
+| `0x3B` | [`CBulletin`](client/059-3b-bulletin.md) | Yes | `Darkages.exe:0x0040ECE1`, `Darkages.exe:0x004109EC`, `Darkages.exe:0x0041294C`, `Darkages.exe:0x004145B4`, `Darkages.exe:0x00415738`, `Darkages.exe:0x00415934`, `Darkages.exe:0x0041715C`, `Darkages.exe:0x0041817E`, `Darkages.exe:0x004187E8`, `Darkages.exe:0x0041A73C`, `Darkages.exe:0x0041AE45`, `Darkages.exe:0x0041B4E4`, `Darkages.exe:0x0041B60B`, `Darkages.exe:0x0041B8A8`, `Darkages.exe:0x0041BA1B`. |
+| `0x3C` | [`CPutToContainer`](client/060-3c-put-to-container.md) | Yes | `Darkages.exe:0x00424B24`. Stone payload semantics not yet independently established. |
+| `0x3D` | [`CGetFromContainer`](client/061-3d-get-from-container.md) | Yes | `Darkages.exe:0x004412D8`, `Darkages.exe:0x00453A15`. |
+| `0x3E` | [`CUseSkill`](client/062-3e-use-skill.md) | Yes | `Darkages.exe:0x00454C96`. Stone payload semantics not yet independently established. |
+| `0x3F` | [`CFieldMap`](client/063-3f-field-map.md) | Yes | `Darkages.exe:0x0043953A`. Stone payload semantics not yet independently established. |
+| `0x41` | [`CGetParcel`](client/065-41-get-parcel.md) | Yes | `Darkages.exe:0x00494E2C`. Stone payload semantics not yet independently established. |
+| `0x42` | [`CException`](client/066-42-exception.md) | Yes | `Darkages.exe:0x00434B43`. Stone payload semantics not yet independently established. |
+| `0x43` | [`CRequestObjectInfo`](client/067-43-request-object-info.md) | Yes | `Darkages.exe:0x0047B755`, `Darkages.exe:0x00488723`, `Darkages.exe:0x0048C820`, `Darkages.exe:0x0048F17F`. |
+| `0x44` | [`CRemoveEquip`](client/068-44-remove-equip.md) | Yes | `Darkages.exe:0x0042F8E2`. Stone payload semantics not yet independently established. |
+| `0x45` | [`CReplyCRC`](client/069-45-reply-crc.md) | Yes | `Darkages.exe:0x00465522`. Stone payload semantics not yet independently established. |
+| `0x46` | [`CGroupView`](client/070-46-group-view.md) | Yes | `Darkages.exe:0x0042F919`. Stone payload semantics not yet independently established. |
+| `0x47` | [`CAddStat`](client/071-47-add-stat.md) | Yes | `Darkages.exe:0x0044028E`. Stone payload semantics not yet independently established. |
+| `0x48` | [`CRequestPatch`](client/072-48-request-patch.md) | No | `Darkages.exe:0x0048763C`, `Darkages.exe:0x004953EC`, `Darkages.exe:0x00495F55`, `Darkages.exe:0x0049609D`. XOR bypass. The later-client scope may be lobby or login. |
+| `0x4A` | [`CExchange`](client/074-4a-exchange.md) | Yes | `Darkages.exe:0x0043071A`, `Darkages.exe:0x0043596E`, `Darkages.exe:0x00435A5A`, `Darkages.exe:0x00435ACA`, `Darkages.exe:0x00435E90`, `Darkages.exe:0x00437310`, `Darkages.exe:0x00437AE8`. |
+| `0x4D` | [`CSpellDelayRequest`](client/077-4d-spell-delay-request.md) | Yes | `Darkages.exe:0x00455CDF`. Stone payload semantics not yet independently established. |
+| `0x4E` | [`CSpellDelaySay`](client/078-4e-spell-delay-say.md) | Yes | Direct sites `Darkages.exe:0x004548F1` and `Darkages.exe:0x00455921`; indirect submissions at `Darkages.exe:0x00455815` and `Darkages.exe:0x00456997` use the action `0x4E` builder at `Darkages.exe:0x00455834`. |
+| `0x4F` | [`CSendPortrait`](client/079-4f-send-portrait.md) | Yes | `Darkages.exe:0x0040A7E3`. `net_c_build_portrait_response` reads and validates the local portrait and includes its bytes in the response to server action `0x49`. |
+| `0x57` | [`CMulti`](client/087-57-multi.md) | Yes | `Darkages.exe:0x004A29D7`, `Darkages.exe:0x004A2EB0`. |
+| `0x62` | [literal `baram`](client/098-62-baram.md) | Yes | `Darkages.exe:0x004AD50B`. The five submitted logical bytes are the literal ASCII string `baram`, so byte zero is action `0x62`. No later-client `C...` class name is established for this special packet. |
 
 ## `baram` bootstrap packet
 

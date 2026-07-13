@@ -31,14 +31,14 @@ The logical packet delivered to or accepted from application code is:
 [action] [payload] [zero sentinel]
 ```
 
-The sequence byte and XOR passes are omitted for client actions `0x00`, `0x48`, and `0x10`, and for server actions `0x00`, `0x40`, and `0x03`. Only transformed client packets consume and increment the client send sequence. See [Networking](../subsystems/networking.md#sequence-and-xor-transformation) for the exact transformation order and generated-table formulas.
+The sequence byte and XOR passes are omitted for client actions `0x00`, `0x10`, and `0x48`, and for server actions `0x00`, `0x03`, and `0x40`. Only transformed client packets consume and increment the client send sequence. See [Sequence and XOR Transformation](xor-transformation.md) for the exact pass order, negotiated key, and generated-table formulas.
 
 ## Directional catalogs
 
 | Direction | Fixed action values | Index |
 |---|---:|---|
-| Client to server | 51 | [Client actions](client-actions.md) and [client message directory](client-messages.md) |
-| Server to client | 59 | [Server actions](server-actions.md) and [server message directory](server-messages.md) |
+| Client to server | 51 | [Client actions](client-actions.md), with one linked page per action |
+| Server to client | 59 | [Server actions](server-actions.md), with one linked page per action |
 
 Thirty-five action values occur in both lists. Direction is part of a packet's identity.
 
