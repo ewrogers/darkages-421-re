@@ -111,10 +111,10 @@ The explicit `WM_QUIT` comparison is normally redundant because `GetMessageA` re
 `win_main_window_proc` connects the pump to client behavior. Relevant lifecycle cases include:
 
 - `WM_DESTROY` calls `PostQuitMessage(0)` and returns 0.
-- An inactive `WM_ACTIVATE` path minimizes the window, beeps, and clears `app_window_active`.
-- The active `WM_ACTIVATE` path repeats the `Brothers Speeder` window check. A match sets the shutdown flag and posts quit or close messages. Otherwise it restores the window, sets the active flag, and calls `ui_screen_pane_activate`.
+- An inactive `WM_ACTIVATEAPP` path minimizes the window, beeps, and clears `app_window_active`.
+- The active `WM_ACTIVATEAPP` path repeats the `Brothers Speeder` window check. A match sets the shutdown flag and posts quit or close messages. Otherwise it restores the window, sets the active flag, and calls `ui_screen_pane_activate`.
 - `WM_USER + 2` routes asynchronous Winsock notifications, as described in [Networking](../subsystems/networking.md#connection-and-windows-notification).
-- Keyboard, mouse, palette, and client-specific messages are dispatched in the same procedure. Unknown messages go to `DefWindowProcA`.
+- Keyboard, mouse, palette, and client-specific messages are dispatched in the same procedure. The complete message table and both application-defined messages are documented in [Input and Windows Events](../subsystems/input-and-events.md#complete-handled-message-table). Unknown messages go to `DefWindowProcA`.
 
 Periodic timer processing is independent of this pump. The event worker waits with a 1 millisecond timeout and invokes the dispatcher tick. See [Worker and timer lifecycle](../subsystems/internal-events.md#worker-and-timer-lifecycle).
 
@@ -174,7 +174,7 @@ The archive failure branch at `Darkages.exe:0x0045CE6C` does not join the common
 
 `Darkages.exe:0x0045BDC0` `win_main_window_proc` is the only window procedure installed for `DAClass`. `DispatchMessageA` reaches it for queued messages, while some client paths also post messages directly to `app_main_window`. Its `WM_DESTROY` case supplies the normal `WM_QUIT`. Other fatal paths set `app_shutdown_requested` and post a message so the blocking loop can observe the flag.
 
-`Darkages.exe:0x0049D790` `ui_screen_pane_activate` sets a screen-pane active field at `+0x568`, resets a presentation counter to 10, restores the pane's render object through a virtual call, and invokes two screen update helpers. It is called once before the first `GetMessageA` and again after an active `WM_ACTIVATE` transition.
+`Darkages.exe:0x0049D790` `ui_screen_pane_activate` sets a screen-pane active field at `+0x568`, resets a presentation counter to 10, restores the pane's render object through a virtual call, and invokes two screen update helpers. It is called once before the first `GetMessageA` and again after an active `WM_ACTIVATEAPP` transition.
 
 ### Teardown
 
@@ -189,8 +189,8 @@ The archive failure branch at `Darkages.exe:0x0045CE6C` does not join the common
 | `Darkages.exe:0x0041D6C0` | `app_check_runservices_entries` | `int __cdecl(void)` | Examine and optionally delete three `RunServices` values. | Called first by `app_win_main`; 1 means a value was deleted after `IDNO` and startup must stop. |
 | `Darkages.exe:0x0045B5F0` | `app_win_main` | `int __stdcall(HINSTANCE instance, HINSTANCE previous_instance, LPSTR command_line, int show_command)` | Own the Win32 lifecycle. | Called only by `app_crt_entry`; calls the checks, creates the mutex and window, initializes subsystems, pumps messages, and shuts down. |
 | `Darkages.exe:0x0045B8F0` | `app_shutdown` | `void __cdecl(void)` | Delete the initialized subsystem graph in fixed order. | Called only on the normal message-loop exit path. Null-checks and clears owned globals. |
-| `Darkages.exe:0x0045BDC0` | `win_main_window_proc` | `LRESULT __stdcall(HWND window, UINT message, WPARAM wparam, LPARAM lparam)` | Dispatch all `DAClass` window messages. | Registered by `app_win_main`; `WM_DESTROY` posts quit and `WM_ACTIVATE` coordinates active state and screen restoration. |
+| `Darkages.exe:0x0045BDC0` | `win_main_window_proc` | `LRESULT __stdcall(HWND window, UINT message, WPARAM wparam, LPARAM lparam)` | Dispatch all `DAClass` window messages. | Registered by `app_win_main`; `WM_DESTROY` posts quit and `WM_ACTIVATEAPP` coordinates active state and screen restoration. See [Input and Windows Events](../subsystems/input-and-events.md). |
 | `Darkages.exe:0x0045C840` | `app_set_working_directory_from_command_line` | `void __cdecl(void)` | Set the current directory to the parsed executable directory. | Called near the start of `app_initialize`; re-reads the raw command line and ignores API failure. |
 | `Darkages.exe:0x0045CCA0` | `app_initialize` | `void __cdecl(void)` | Construct resources, rendering, audio, configuration, event workers, screen state, and the initial pane. | Called after window creation. Uses `app_error_code` and staged cleanup; the missing-archive branch calls `_exit(0)`. |
-| `Darkages.exe:0x0049D790` | `ui_screen_pane_activate` | `void __thiscall(void *screen_pane)` | Restore active screen and presentation state. | Called before the message loop and by the active `WM_ACTIVATE` path. |
+| `Darkages.exe:0x0049D790` | `ui_screen_pane_activate` | `void __thiscall(void *screen_pane)` | Restore active screen and presentation state. | Called before the message loop and by the active `WM_ACTIVATEAPP` path. |
 | `Darkages.exe:0x004C62A5` | `app_crt_entry` | `void __cdecl(void)` | Initialize the Microsoft C runtime and hand off to `app_win_main`. | PE process entry; passes the result to `_exit` and contains the CRT exception path. |

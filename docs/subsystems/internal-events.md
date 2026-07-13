@@ -17,6 +17,8 @@ The established socket path is:
 
 Packet ownership and the type 9 fields are documented in [Networking](networking.md#receive-and-event-routing). Pane registration and timer callbacks remain owned by this subsystem.
 
+Window input uses the same EventMan worker. The main window procedure posts work codes 4 through `0x0B` for mouse movement, buttons, wheel, and physical scan codes. `event_process_work_item` converts those records into mouse and key state or Events before the normal pane hierarchy sees them. The complete mapping is documented in [Input and Windows Events](input-and-events.md#mouse-queue-and-worker-path).
+
 ### Worker and timer lifecycle
 
 The Windows message loop is not a frame loop. The dispatcher derives from a cross-subsystem thread-queue base whose constructor creates a thread with `_beginthreadex` and `CREATE_SUSPENDED`. The same base is also used by the Socket and other worker-derived objects. The dispatcher configures that worker before `util_thread_queue_start` resumes it:
@@ -190,7 +192,7 @@ Offsets below are from the event dispatcher object. The worker-base fields are s
 | `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | `int __thiscall(void *this, void *event, void *hierarchy)` | Walk registered panes and call the type-specific virtual handler. | Socket Event type 9 reaches pane virtual slot `+0x40`. |
 | `Darkages.exe:0x00432630` | `event_manager_ctor` | `void *__thiscall(void *event_manager_object)` | Construct and publish the EventMan singleton. | Calls `util_thread_queue_ctor` with capacity `0x80`, initializes event-manager and Socket-facing state, and stores `event_manager_instance`. |
 | `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *this, const uint8_t *packet, int length)` | Copy decoded packet bytes to event-manager work code `0x0E`. | Called by the Socket receive path. |
-| `Darkages.exe:0x00433110` | `event_process_work_item` | `void __thiscall(void *this, int code, void *data, int value)` | Convert event-manager work records into Event objects. | Work code `0x0E` creates a socket-packet Event and transfers packet ownership. |
+| `Darkages.exe:0x00433110` | `event_process_work_item` | `void __thiscall(void *this, int code, void *data, int value)` | Convert event-manager work records into input state or Event objects. | Work codes 4 through `0x0B` handle window input; code `0x0E` creates a socket-packet Event and transfers packet ownership. |
 | `Darkages.exe:0x00433DC4` | `event_queue_socket_packet` | `void __stdcall(uint8_t *packet, uint32_t size)` | Queue Event type 9 with packet ownership. | Called by `event_process_work_item`; the event manager frees the packet after dispatch. |
 | `Darkages.exe:0x004BE9B0` | `util_thread_queue_ctor` | `void *__thiscall(void *worker_object, int queue_capacity)` | Construct queue state and a suspended worker thread. | Cross-subsystem base constructor used by the dispatcher, event manager, Socket, and other worker-derived objects. |
 | `Darkages.exe:0x004BECB0` | `util_thread_queue_dtor` | `void __thiscall(void *worker_object)` | Terminate the worker and close its handles and queue state. | Uses `TerminateThread`; called by derived destructors. |

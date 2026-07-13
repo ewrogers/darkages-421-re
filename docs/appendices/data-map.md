@@ -4,7 +4,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 
 | Address | Current IDA name | Type or size | Owner | Purpose | Detailed page | Notes |
 |---:|---|---|---|---|---|---|
-| `Darkages.exe:0x004D64C0` | `app_window_active` | `uint8_t` | Application and Win32 | Records whether the main window is treated as active. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) | Set before the message loop and by `WM_ACTIVATE` handling. |
+| `Darkages.exe:0x004D64C0` | `app_window_active` | `uint8_t` | Application and Win32 | Records whether the main window is treated as active. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) | Set before the message loop and by `WM_ACTIVATEAPP` handling. |
 | `Darkages.exe:0x004E0F00` | `net_xor_table` | `uint32_t[256]` | Socket transformation | Generated XOR byte table. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#table-generators) | Each dword repeats one byte four times. Initial contents implement function 0. |
 | `Darkages.exe:0x004E32C0` | `event_manager_instance` | `void *` | Events and network | EventMan singleton that converts worker records into Event objects. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) | Published by `event_manager_ctor` and started separately from `event_dispatcher`. |
 | `Darkages.exe:0x004F51B8` | `event_deferred_delete_queue` | `void *` | Events | Holds objects awaiting deletion by the dispatcher tick. | [Internal Event Routing](../subsystems/internal-events.md#periodic-tick-and-deferred-deletion) | Created during initialization, drained from last element to first, and deleted after the dispatcher. |
@@ -16,6 +16,8 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x004F51E0` | `app_instance` | `HINSTANCE` | Application and Win32 | Saved process instance handle. | [Startup and Shutdown](../lifecycle/startup.md#process-entry-and-window-class) | Assigned by `app_win_main` after class registration. |
 | `Darkages.exe:0x004F51F4` | `app_shutdown_requested` | `uint8_t` | Application | Requests termination of the blocking message loop. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) | Observed only after `GetMessageA` returns. Several writers also post a message to wake the loop. |
 | `Darkages.exe:0x004FA0E0` | `app_single_instance_mutex` | `HANDLE` | Application | Handle for `Nexon.SingleInstance`. | [Startup and Shutdown](../lifecycle/startup.md#preflight-checks-and-single-instance-enforcement) | Closed and cleared only after normal `app_shutdown`. |
+| `Darkages.exe:0x004FD320` | `app_virus_check_failure_detail` | `char[256]` | Application checks | Detail inserted into the virus-scan failure prompt. | [Input and Windows Events](../subsystems/input-and-events.md#application-defined-messages) | Used when `WM_USER + 0x2046` arrives with zero `wParam`. |
+| `Darkages.exe:0x004FD420` | `app_virus_report_module` | `char[256]` | Application checks | First infected-module name reported to the window thread. | [Input and Windows Events](../subsystems/input-and-events.md#application-defined-messages) | Its address is posted in `wParam` for `WM_USER + 0x2046`. |
 | `Darkages.exe:0x004FD5A0` | `net_xor_key` | key storage, at least 13 bytes | Socket transformation | Runtime repeating XOR key. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#runtime-state-and-defaults) | Constructor default is ASCII `NexonInc.`. Negotiated updates require at most 9 bytes. |
 | `Darkages.exe:0x004FD5AC` | `net_xor_key_length` | `int32_t` | Socket transformation | Number of bytes in the active key. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#runtime-state-and-defaults) | Default is 9. |
 | `Darkages.exe:0x004FD5B0` | `net_xor_key_repeated` | `uint8_t[48]` | Socket transformation | Four adjacent copies of the key. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#runtime-state-and-defaults) | Supports optimized four-byte XOR loops. |
@@ -54,6 +56,24 @@ Offsets below are from the object stored in `event_dispatcher`. The earlier fiel
 | `+0x08` | 4 | Absolute 32-bit `timeGetTime` deadline. |
 | `+0x0C` | 4 | First callback payload value. |
 | `+0x10` | 4 | Second callback payload value. |
+
+## Event manager input fields
+
+Offsets below are from the object stored in `event_manager_instance`. They are used by the window-message input queue and the EventMan worker.
+
+| Offset | Width | Working field | Reads and writes |
+|---:|---:|---|---|
+| `+0x006C` | 4 | `mouse_y` | Updated from the first word of internal `(y, x)` mouse-move work and copied into button and wheel Events. |
+| `+0x0070` | 4 | `mouse_x` | Updated from the second word of internal `(y, x)` mouse-move work and copied into button and wheel Events. |
+| `+0x007C` | 4 | `double_click_time_limit` | A second button down is eligible only when its unsigned elapsed message time is strictly less than this value. |
+| `+0x0080` | 1 | `previous_click_button` | Value 1 records a prior left down; value 0 records a prior right down. |
+| `+0x0084` | 4 | `previous_click_y` | First coordinate used by internal double-click recognition. |
+| `+0x0088` | 4 | `previous_click_x` | Second coordinate used by internal double-click recognition. |
+| `+0x008C` | 4 | `previous_click_time` | `GetMessageTime` value for the prior button-down candidate. |
+| `+0x0390` | 256 | `scan_code_pressed` | Per-scan-code state; bit 7 is set on key down and cleared on key up. |
+| `+0x0490` | 1 | `input_modifier_state` | Combined mouse-button and mapped keyboard modifier bits placed in Events. |
+| `+0x04B0` | 4 | `input_block_flags` | Bit 0 suppresses movement, wheel, button-down, and key-down queueing. |
+| `+0x04B4` | 4 | `mouse_button_state` | Bit 0 tracks left and bit 1 tracks right at window-message enqueue time. |
 
 ## Socket fields used by binary TCP
 
