@@ -1,6 +1,6 @@
 # Dark Ages 4.21 Client Reverse Engineering
 
-[Read the documentation](https://ewrogers.github.io/darkages-421-re/)
+[Published docs](https://ewrogers.github.io/darkages-421-re/)
 
 Technical documentation of the Dark Ages 4.21 Stone client.
 
