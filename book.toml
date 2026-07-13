@@ -1,0 +1,15 @@
+[book]
+title = "Dark Ages 4.21 Client"
+description = "Evidence-based documentation of the Dark Ages Stone client"
+authors = ["Dark Ages client research contributors"]
+language = "en"
+src = "docs"
+
+[build]
+build-dir = "book"
+create-missing = false
+
+[output.html]
+default-theme = "ayu"
+preferred-dark-theme = "ayu"
+git-repository-icon = "fa-github"

@@ -1,0 +1,40 @@
+# Local agent and editor state
+.codex/
+.local/
+.idea/
+.vscode/
+*.swp
+*.tmp
+
+# mdBook output
+book/
+
+# Executables, libraries, installers, and game content
+*.exe
+*.dll
+*.com
+*.msi
+*.cab
+*.zip
+*.7z
+*.rar
+game-assets/
+private-samples/
+artifacts/
+
+# Reverse engineering databases and generated analysis
+*.idb
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.dmp
+*.dump
+
+# Network and runtime captures
+*.pcap
+*.pcapng
+captures/
+traces/
