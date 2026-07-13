@@ -28,6 +28,8 @@
 # Network Protocol
 
 - [Protocol Catalog](protocol/overview.md)
+  - [Client Actions](protocol/client-actions.md)
+  - [Server Actions](protocol/server-actions.md)
 
 # Appendices
 
