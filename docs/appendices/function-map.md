@@ -81,6 +81,44 @@ This appendix is a cross-subsystem index of important functions, grouped by prim
 | `Darkages.exe:0x004A8414` | `net_set_xor_key` | Network | `void __stdcall(int length, const uint8_t *key)` | Replace and repeat the runtime XOR key. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#runtime-state-and-defaults) |
 | `Darkages.exe:0x004A8590` | `net_build_xor_table` | Network | `void __stdcall(int function_index)` | Generate the 256-entry XOR table. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#table-generators) |
 
+## UI panes and registries
+
+| Address | Current IDA name | Subsystem | Prototype | Purpose | Detailed page |
+|---:|---|---|---|---|---|
+| `Darkages.exe:0x0040A5A0` | `ui_pane_default_key_handler` | UI and events | established Pane virtual handler | Default keyboard handler at vslot `+0x3C`. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) |
+| `Darkages.exe:0x0040A5B0` | `ui_background_pane_ctor` | UI | established `__thiscall` constructor | Construct the in-game BackgroundPane. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x0040B460` | `ui_pane_default_mouse_handler` | UI and events | established Pane virtual handler | Default mouse handler at vslot `+0x38`. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) |
+| `Darkages.exe:0x0040B470` | `ui_pane_default_socket_handler` | UI and events | established Pane virtual handler | Default socket Event handler at vslot `+0x40`. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) |
+| `Darkages.exe:0x0040EA50` | `ui_pane_default_timer_handler` | UI and timing | established Pane virtual handler | Default timer callback at vslot `+0x44`. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) |
+| `Darkages.exe:0x00442C04` | `ui_game_buttons_remove_skill_pane` | UI | established `__thiscall` method | Remove, unregister, delete, and clear an indexed skill pane. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00442D14` | `ui_game_buttons_create_skill_pane` | UI | established `__thiscall` method | Allocate and register an indexed skill pane. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00443E14` | `ui_game_buttons_remove_spell_pane` | UI | established `__thiscall` method | Remove, unregister, delete, and clear an indexed spell pane. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00443F24` | `ui_game_buttons_create_spell_pane` | UI | established `__thiscall` method | Allocate and register an indexed spell pane. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x0044E4D0` | `ui_hierarchy_list_ctor` | UI and events | `void *__thiscall(void *, int)` | Construct a packed hierarchy list. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) |
+| `Darkages.exe:0x004594A0` | `ui_hierarchy_get_node` | UI and events | `void *__thiscall(void *, int)` | Return a checked packed-node address. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) |
+| `Darkages.exe:0x0045D930` | `ui_main_menu_pane_ctor` | UI | established `__thiscall` constructor | Construct and publish MainMenuPane. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x0045FA44` | `ui_main_menu_create_game_panes` | UI | established `__thiscall` transition method | Build and publish the in-game pane graph. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x004658C0` | `ui_map_pane_ctor` | UI | established `__thiscall` constructor | Construct the `0xF38`-byte MapPane. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) |
+| `Darkages.exe:0x00467320` | `ui_map_handle_key_event` | UI and events | established Pane virtual handler | Handle MapPane keyboard Events. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) |
+| `Darkages.exe:0x00467360` | `ui_map_handle_mouse_event` | UI and events | established Pane virtual handler | Handle MapPane mouse Events. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) |
+| `Darkages.exe:0x00492A90` | `ui_pane_dtor` | UI | `void __thiscall(void *)` | Cancel timers and destroy the Pane base. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x00492AD0` | `ui_pane_ctor` | UI | `void *__thiscall(void *, unsigned char, unsigned char)` | Construct common Pane fields and install the base vtable. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) |
+| `Darkages.exe:0x004933C0` | `ui_pane_add_to_screen` | UI | `void __thiscall(void *, const RECT *, void *, void *)` | Add a Pane to Screen composition. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00493480` | `ui_pane_remove_from_screen` | UI | `void __thiscall(void *)` | Remove a Pane from Screen composition. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00493530` | `ui_pane_register_events` | UI and events | `void __thiscall(void *, void *, int)` | Register a Pane in event traversal. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x004935D0` | `ui_pane_unregister_events` | UI and events | `void __thiscall(void *)` | Remove a Pane from event traversal. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00498F20` | `ui_screen_registry_ctor` | UI | `void *__thiscall(void *)` | Construct the Screen composition hierarchy. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) |
+| `Darkages.exe:0x00498F40` | `ui_screen_add_pane` | UI | established `__thiscall` method | Validate and insert a Screen node. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x004993C4` | `ui_screen_find_pane_node` | UI | established recursive `__thiscall` search | Find a pane's packed Screen node. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00499530` | `ui_screen_remove_pane` | UI | established `__thiscall` method | Remove a Screen node and child hierarchy. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x00499ED0` | `ui_screen_get_pane_origin` | UI | established `__thiscall` query | Accumulate a pane's screen-space origin. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+| `Darkages.exe:0x004A1B04` | `ui_server_select_dialog_pane_dtor` | UI | established `__thiscall` destructor | Unregister and remove ServerSelectDialogPane. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x004A2740` | `ui_server_select_dialog_pane_ctor` | UI | established `__thiscall` constructor | Construct, add, and register ServerSelectDialogPane. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x004AC944` | `ui_terminal_pane_dtor` | UI | established `__thiscall` destructor | Clear the terminal root and destroy derived state. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x004ACA00` | `ui_terminal_pane_ctor` | UI | established `__thiscall` constructor | Construct, publish, add, and register TerminalPane. | [UI Panes and Registries](../subsystems/ui-panes.md#pane-lifecycle) |
+| `Darkages.exe:0x004AD130` | `ui_get_terminal_pane` | UI | `void *__cdecl(void)` | Return the static TerminalPane pointer. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) |
+| `Darkages.exe:0x004BE6F4` | `ui_text_edit_handle_key_event` | UI and events | established Pane virtual handler | Complete or cancel a temporary TextEdit pane. | [UI Panes and Registries](../subsystems/ui-panes.md#creation-and-removal-paths) |
+
 ## UI protocol dispatch
 
 | Address | Current IDA name | Subsystem | Prototype | Purpose | Detailed page |

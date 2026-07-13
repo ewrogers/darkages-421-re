@@ -17,6 +17,8 @@ The established socket path is:
 
 Packet ownership and the type 9 fields are documented in [Networking](networking.md#receive-and-event-routing). Pane registration and timer callbacks remain owned by this subsystem.
 
+The dispatcher hierarchy is separate from the Screen composition hierarchy. The event tree stores packed `0x0F`-byte nodes with a pane pointer at `+0x08`, while Screen stores placement and drawing relationships in `0x3F`-byte nodes. Their raw layouts, pane virtual slots, creation and removal flows, and complete vtable inventory are documented in [UI Panes and Registries](ui-panes.md).
+
 Window input uses the same EventMan worker. The main window procedure posts work codes 4 through `0x0B` for mouse movement, buttons, wheel, and physical scan codes. `event_process_work_item` converts those records into mouse and key state or Events before the normal pane hierarchy sees them. The complete mapping is documented in [Input and Windows Events](input-and-events.md#mouse-queue-and-worker-path).
 
 ### Worker and timer lifecycle
@@ -168,7 +170,7 @@ Offsets below are from the event dispatcher object. The worker-base fields are s
 | `+0x10` | 1 | `wait_handle_count` | Passed to `WaitForMultipleObjects`. |
 | `+0x14` | variable | `wait_handles` | Handle index 0 is the worker queue notification. |
 | `+0x60` | 4 | `worker_thread` | Suspended handle created by the base constructor, resumed by `util_thread_queue_start`, forcibly terminated by the base destructor. |
-| `+0x68` | 4 | `pane_registry` | Owns pane and hierarchy registrations used by event dispatch. |
+| `+0x68` | 4 | `pane_registry` | Points to a packed hierarchy with stride `0x0F`; each node stores its child list at `+0x04` and pane at `+0x08`. |
 | `+0x6C` | 4 | `multimedia_period_ms` | Period passed to `timeBeginPeriod` and later `timeEndPeriod`. |
 | `+0x70` | 4 | `current_tick` | Latest `timeGetTime` sample; also the base for newly inserted relative delays. |
 | `+0x74` | 4 | `next_deadline` | First timer deadline, or `UINT32_MAX` when empty. |

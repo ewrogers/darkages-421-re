@@ -17,6 +17,7 @@
 - [Rendering](subsystems/rendering.md)
 - [Audio](subsystems/audio.md)
 - [Input and Windows Events](subsystems/input-and-events.md)
+- [UI Panes and Registries](subsystems/ui-panes.md)
 - [Internal Event Routing](subsystems/internal-events.md)
 - [File System](subsystems/file-system.md)
 - [Networking](subsystems/networking.md)
@@ -147,4 +148,5 @@
 - [Analyzed Binary](appendices/binary-identity.md)
 - [Function Map](appendices/function-map.md)
 - [Data Map](appendices/data-map.md)
+- [Pane Virtual Table Inventory](appendices/ui-pane-vtables.md)
 - [Glossary](appendices/glossary.md)
