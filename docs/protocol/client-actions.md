@@ -2,6 +2,8 @@
 
 This index records every fixed action byte placed in a logical client packet before `net_c_queue_send`. The send-site addresses are the calls that submit the completed byte array.
 
+For per-message logical shapes, containing function names, and queue call sites, use the [Client Message Directory](client-messages.md).
+
 The `C...` names are direction-prefixed reference names supplied from later-client dumps. They are not RTTI or symbols recovered from the Stone executable, and a matching action value does not by itself establish that the later payload schema is identical. Each row separately records what is established in the 4.21 code. The supplied later-client list matches all 51 fixed action values found in Stone, with no additional fixed client action found. The spelling `CNewUserApperance` is preserved from the supplied name.
 
 All entries use the client-to-server direction. The send queue appends a zero sentinel. Except for actions `0x00`, `0x48`, and `0x10`, `net_c_encode_packet_body` also inserts a sequence byte, applies the XOR transformation, and increments the send sequence before framing. The three cleartext bypass actions neither carry nor consume a sequence value.

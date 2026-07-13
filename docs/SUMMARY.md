@@ -28,8 +28,9 @@
 # Network Protocol
 
 - [Protocol Catalog](protocol/overview.md)
-  - [Client Actions](protocol/client-actions.md)
-  - [Server Actions](protocol/server-actions.md)
+  - [Client to Server](protocol/client-actions.md)
+    - [Client Message Directory](protocol/client-messages.md)
+  - [Server to Client](protocol/server-actions.md)
 
 # Appendices
 
