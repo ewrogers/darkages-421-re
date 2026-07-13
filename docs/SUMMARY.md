@@ -7,6 +7,7 @@
 # Architecture
 
 - [Client Overview](architecture/overview.md)
+- [UI, Input, and Packet Flows](architecture/ui-network-flows.md)
 
 # Lifecycle
 
@@ -43,6 +44,7 @@
     - [CPutGround (0x0C)](protocol/client/012-0c-put-ground.md)
     - [CBlockListen (0x0D)](protocol/client/013-0d-block-listen.md)
     - [CSay (0x0E)](protocol/client/014-0e-say.md)
+    - [CUseSpell (0x0F)](protocol/client/015-0f-use-spell.md)
     - [CTransferServer (0x10)](protocol/client/016-10-transfer-server.md)
     - [CChangeDirection (0x11)](protocol/client/017-11-change-direction.md)
     - [CAttack (0x13)](protocol/client/019-13-attack.md)

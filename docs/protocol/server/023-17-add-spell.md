@@ -20,13 +20,15 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x00443B10` | `sub_443B10` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00443B10` | `ui_spell_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
 | `Darkages.exe:0x004889F0` | `sub_4889F0` | Accepts the action in its pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00443B10` `sub_443B10`, `Darkages.exe:0x004889F0` `sub_4889F0`.
+`Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet` removes any existing pane in the selected slot, allocates a `0x214`-byte spell slot pane, and adds and registers it below the spell inventory owner. `Darkages.exe:0x004889F0` also observes this action in its own registered pane context.
 
-## Schema status
+## UI behavior
 
-The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+This action changes the spell inventory's child panes but does not select or show the persistent spell inventory. The player selects that parent locally with D or its game button. Right-button up over a populated slot opens `SpellBookDialog` without another server request.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#skill-and-spell-inventories).

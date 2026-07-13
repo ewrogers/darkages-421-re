@@ -14,14 +14,16 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Offset | Width | Field | Established meaning |
 |---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+| `0x00` | 1 | `skill_slot` | Slot byte read from the activated skill pane at object `+0x276`. |
 
 ## Queue call sites
 
 | Queue call | Containing IDA function | Function address |
 |---:|---|---:|
-| `Darkages.exe:0x00454C96` | `sub_454C64` | `Darkages.exe:0x00454C64` |
+| `Darkages.exe:0x00454C96` | `net_c_send_use_skill` | `Darkages.exe:0x00454C64` |
 
-## Schema status
+## UI flow
 
-The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.
+`Darkages.exe:0x00454C64` `net_c_send_use_skill` builds exactly `[0x3E, skill_slot]`. The slot activation path can first send a length-prefixed `CSpellDelaySay` `0x4E` phrase loaded for the skill, then sends `CUseSkill`. Right-button down is separate and opens the local `SkillBookDialog` without network traffic.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#skill-and-spell-inventories).

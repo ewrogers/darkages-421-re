@@ -20,12 +20,14 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x00442990` | `sub_442990` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00442990` | `ui_skill_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00442990` `sub_442990`.
+`Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet` removes any existing pane in the selected slot, allocates a `0x294`-byte skill slot pane, and adds and registers it below the skill inventory owner.
 
-## Schema status
+## UI behavior
 
-The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+This action changes skill slot children but does not select or show the persistent skill inventory. The player selects that parent locally with S or its game button. Right-button down over a populated slot opens `SkillBookDialog` without another server request.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#skill-and-spell-inventories).

@@ -12,16 +12,16 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Payload format
 
-| Offset | Width | Field | Established meaning |
-|---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+`CSelfLook` has no payload. `Darkages.exe:0x0043D4C4` `net_c_send_self_look` submits exactly one logical byte, the action.
 
 ## Queue call sites
 
 | Queue call | Containing IDA function | Function address |
 |---:|---|---:|
-| `Darkages.exe:0x0043D4DC` | `sub_43D4C4` | `Darkages.exe:0x0043D4C4` |
+| `Darkages.exe:0x0043D4DC` | `net_c_send_self_look` | `Darkages.exe:0x0043D4C4` |
 
-## Schema status
+## UI flow
 
-The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.
+The inventory/equipment selector sends this action only when the equipment pane is already the current content pane but has been hidden by selecting it twice. It sends `CSelfLook` before showing the pane again. Switching to equipment from another A/S/D/F/G content pane does not send it. `SSelfLook` `0x39` refreshes fields asynchronously and does not control visibility.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#equipment-and-self-look).

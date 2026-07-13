@@ -26,6 +26,8 @@ The transition into the game reaches `ui_main_menu_create_game_panes`. It create
 
 Temporary controls follow the same rule. The game-buttons owner stores each allocated skill or spell pane in an indexed heap-pointer array, adds it below the owner in Screen, and registers it below the owner in the event tree. Removal deletes the node from both trees, deletes the object, and clears the pointer slot. `TextEdit` Escape and Enter paths also remove both registrations before queueing deferred deletion. Enter calls the class-specific virtual slot `+0x4C` before removal.
 
+Visibility is separate from both hierarchies. Common Pane vslot `+0x14` sets the visible flag at `+0xB0` and invalidates the pane, while `+0x18` clears the flag and invalidates the exposed parent region. Persistent content panes can therefore remain present in both registries while hidden. The exact packet and input transitions for equipment, status, skills, spells, users, paper, messages, and bulletin or mail are in [UI, Input, and Packet Flows](../architecture/ui-network-flows.md).
+
 The base `ui_pane_dtor` only cancels timers and destroys base members. It does not unregister the object from either tree. Every owning path must therefore remove both registrations before immediate or deferred deletion. The observed order varies by owner, but both removals precede destruction.
 
 ### Named persistent panes and handlers
@@ -40,11 +42,12 @@ The following panes have established construction, virtual-table, and handler ev
 | `BackgroundPane` | `ui_background_pane` at `Darkages.exe:0x004F51B4`, `0x144` bytes | `ui_background_pane_vtable` at `Darkages.exe:0x00500700` | `ui_background_pane_handle_mouse_event` | `ui_pane_default_key_handler` | `ui_handle_server_request_portrait` | `ui_background_pane_handle_timer` |
 | `MapPane` | `ui_map_pane` at `Darkages.exe:0x004F51B0`, `0xF38` bytes | `ui_map_pane_vtable` at `Darkages.exe:0x00519280` | `ui_map_handle_mouse_event` | `ui_map_handle_key_event` | `ui_map_dispatch_server_packet` | `ui_map_handle_timer` |
 | `ServerSelectDialogPane` | Dynamic, `0x554` bytes | `ui_server_select_dialog_pane_vtable` at `Darkages.exe:0x00526140` | `ui_server_select_handle_mouse_event` | `ui_dialog_handle_key_event` | `ui_server_select_handle_server_packet` | `ui_dialog_default_timer_handler` |
+| `OptionPane` | Dynamic, `0x578` bytes | `ui_option_pane_vtable` at `Darkages.exe:0x00520660` | `ui_option_pane_handle_mouse_event` | `ui_option_pane_handle_key_event` | `ui_option_pane_handle_server_packet` | `ui_option_pane_handle_timer` |
 | Exit-wait pane | Dynamic | `ui_exit_wait_pane_vtable` at `Darkages.exe:0x005207E0` | `ui_dialog_handle_mouse_event` | `ui_dialog_handle_key_event` | `ui_exit_wait_handle_server_packet` | `ui_dialog_default_timer_handler` |
 
 ### Friendly class names and concrete event coverage
 
-The executable has no usable Microsoft RTTI for this hierarchy, but it retains many class and method diagnostics. A friendly class name is treated as confirmed only when the same constructor, destructor, or virtual method also installs or is stored in the candidate vtable. This establishes names such as `BulletinDialogPane`, `ArticleListDialog`, `MailListPane`, `LegendDialogPane`, `MonsterPane2`, `EffectObjectPane`, and `WeatherPane` without relying on nearby text alone. The complete confirmed name-to-vtable map is in [Pane Virtual Table Inventory](../appendices/ui-pane-vtables.md#confirmed-friendly-class-names).
+The executable has no usable Microsoft RTTI for this hierarchy, but it retains many class and method diagnostics. A friendly class name is treated as confirmed only when the same constructor, destructor, or virtual method also installs or is stored in the candidate vtable. This establishes names such as `BulletinDialogPane`, `ArticleListDialog`, `MailListPane`, `LegendDialogPane`, `MonsterPane2`, `EffectObjectPane`, `OptionPane`, and `WeatherPane` without relying on nearby text alone. The complete confirmed name-to-vtable map is in [Pane Virtual Table Inventory](../appendices/ui-pane-vtables.md#confirmed-friendly-class-names).
 
 A vtable identifies the broad Event families a pane can receive. The handler body supplies the narrower filter. For example, `ServerSelectDialogPane` has mouse, keyboard, socket, and timer slots, but its mouse override only adds behavior for a left double-click and its socket override only claims server action `0x56`. The inherited Dialog handlers still process their ordinary mouse and keyboard cases. This distinction is important for runtime hooks because a non-default slot does not imply that every subtype is consumed.
 
@@ -59,6 +62,9 @@ The documented virtual addresses use image base `0x00400000`. A runtime tool tha
 | VA | RVA | Current IDA name | Runtime meaning | Lifetime and nullability |
 |---:|---:|---|---|---|
 | `Darkages.exe:0x004F51AC` | `0x000F51AC` | `ui_main_menu_pane` | Pointer to the heap `MainMenuPane`. | Non-null during the main-menu phase; cleared during transitions and teardown. |
+| `Darkages.exe:0x004E2D70` | `0x000E2D70` | `ui_bulletin_session` | Pointer to the active heap BulletinSession. | Non-null only while a bulletin or mail session owns its child-dialog history. |
+| `Darkages.exe:0x004E32A4` | `0x000E32A4` | `ui_equip_pane` | Pointer to the persistent heap User Equip pane. | Published during game-pane construction and cleared by its destructor. |
+| `Darkages.exe:0x004E3564` | `0x000E3564` | `ui_users_dialog_pane` | Pointer to the heap Users Dialog Pane. | Null until the first CWho UI action creates it; reused for later SShowUsers replies. |
 | `Darkages.exe:0x004F51B0` | `0x000F51B0` | `ui_map_pane` | Pointer to the heap `MapPane`. | Published after game-pane creation; cleared during game teardown. |
 | `Darkages.exe:0x004F51B4` | `0x000F51B4` | `ui_background_pane` | Pointer to the heap `BackgroundPane`. | Published with the game UI; cleared during game teardown. |
 | `Darkages.exe:0x004F51C8` | `0x000F51C8` | `ui_screen_pane` | Pointer to the persistent heap `ScreenPane`. | Non-null after successful initialization until application shutdown. |
@@ -81,7 +87,7 @@ External readers can race Screen changes, event registration, and deferred delet
 | `+0x0000` | 4 | Current virtual-table pointer. |
 | `+0x0008` | 4 | Last propagated Screen or dispatcher error. |
 | `+0x00A8` | 16 | Pane bounds `RECT`. |
-| `+0x00B0` | 1 | Enabled state; set and cleared by the Pane activation methods. |
+| `+0x00B0` | 1 | Visible or active state; set by `ui_pane_show`, cleared by `ui_pane_hide`, and queried by `ui_pane_is_visible`. |
 | `+0x00B1` | 1 | Constructor flag copied from the first stack argument; exact meaning is not yet established. |
 | `+0x00B2` | 1 | Constructor flag copied from the second stack argument; exact meaning is not yet established. |
 | `+0x00B3` | 1 | Pane flag copied into the Screen node payload. |
@@ -89,6 +95,8 @@ External readers can race Screen changes, event registration, and deferred delet
 
 | Vtable offset | Role | Base implementation |
 |---:|---|---|
+| `+0x14` | Show pane and invalidate its region | `ui_pane_show` |
+| `+0x18` | Hide pane and invalidate the exposed parent region | `ui_pane_hide` |
 | `+0x28` | Add pane to Screen composition | `ui_pane_add_to_screen` |
 | `+0x2C` | Remove pane from Screen composition | `ui_pane_remove_from_screen` |
 | `+0x30` | Register event receiver | `ui_pane_register_events` |
@@ -273,6 +281,11 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x004658C0` | `ui_map_pane_ctor` | established `__thiscall` constructor | Construct `MapPane`. | Called for a `0xF38`-byte allocation during game UI creation. |
 | `Darkages.exe:0x0047DBA0` | `ui_question_message_dialog_handle_mouse_event` | `int __thiscall(void *, void *)` | Add drag tracking for the question-message dialog family. | Handles subtypes `1` and `3`, then delegates to Dialog. |
 | `Darkages.exe:0x0048D2E0` | `ui_effect_object_pane_handle_timer` | established Pane timer handler | Process `EffectObjectPane` timer callbacks. | Class name and method are confirmed by the vslot and diagnostic. |
+| `Darkages.exe:0x0048F600` | `ui_option_pane_ctor` | `void *__thiscall(void *)` | Construct, add, and register dynamic OptionPane. | Installed by the Q window-button path. |
+| `Darkages.exe:0x004909E0` | `ui_option_pane_handle_server_packet` | `int __thiscall(void *, void *)` | Claim SSelfSaveOk. | Creates a local confirmation dialog. |
+| `Darkages.exe:0x00490A80` | `ui_option_pane_handle_mouse_event` | `int __thiscall(void *, void *)` | Process OptionPane mouse state. | Delegates common behavior to Dialog. |
+| `Darkages.exe:0x00490D70` | `ui_option_pane_handle_timer` | `int __thiscall(void *, int, int, int)` | Advance OptionPane timer state. | Handles callback 100 separately. |
+| `Darkages.exe:0x00490FE0` | `ui_option_pane_handle_key_event` | `int __thiscall(void *, void *)` | Process OptionPane shortcuts. | X constructs the exit-wait pane. |
 | `Darkages.exe:0x00498F20` | `ui_screen_registry_ctor` | `void *__thiscall(void *registry)` | Construct the Screen composition registry. | Requests a `0x34`-byte hierarchy payload. |
 | `Darkages.exe:0x00498F40` | `ui_screen_add_pane` | established `__thiscall` add method | Validate and insert a Screen pane node. | Called by `ui_pane_add_to_screen`. |
 | `Darkages.exe:0x004993C4` | `ui_screen_find_pane_node` | established recursive `__thiscall` search | Find a pane and optionally return its list and index. | Used for parent, sibling, removal, and coordinate queries. |
@@ -282,6 +295,9 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x004A1900` | `ui_scrollable_pane_handle_key_event` | `int __thiscall(void *, void *)` | Route key input through scroll bars and the list body. | Base key path for the same scrollable list panes. |
 | `Darkages.exe:0x00492A90` | `ui_pane_dtor` | `void __thiscall(void *pane)` | Cancel timers and destroy the Pane base. | Does not remove either hierarchy registration. |
 | `Darkages.exe:0x00492AD0` | `ui_pane_ctor` | `void *__thiscall(void *, unsigned char, unsigned char)` | Construct the common Pane base. | Installs `ui_pane_vtable` and initializes bounds and flags. |
+| `Darkages.exe:0x00492C10` | `ui_pane_is_visible` | `int __thiscall(void *pane)` | Query common Pane visibility. | Used by the equipment same-pane toggle. |
+| `Darkages.exe:0x00492C40` | `ui_pane_show` | `void __thiscall(void *pane)` | Set `+0xB0`, update Screen state, and invalidate. | Common Pane vslot `+0x14`. |
+| `Darkages.exe:0x00492D50` | `ui_pane_hide` | `void __thiscall(void *pane)` | Clear `+0xB0` and invalidate the exposed parent region. | Common Pane vslot `+0x18`; also handles capture state. |
 | `Darkages.exe:0x004933C0` | `ui_pane_add_to_screen` | `void __thiscall(void *, const RECT *, void *, void *)` | Add this pane to Screen composition. | Pane vslot `+0x28`; delegates to `ui_screen_add_pane`. |
 | `Darkages.exe:0x00493480` | `ui_pane_remove_from_screen` | `void __thiscall(void *)` | Remove this pane from Screen composition. | Pane vslot `+0x2C`; delegates to `ui_screen_remove_pane`. |
 | `Darkages.exe:0x00493530` | `ui_pane_register_events` | `void __thiscall(void *, void *, int)` | Register this pane for event traversal. | Pane vslot `+0x30`; the signature xrefs enumerate compatible vtables. |

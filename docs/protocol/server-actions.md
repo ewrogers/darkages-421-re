@@ -29,38 +29,38 @@ All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x4
 | `0x11` | [`SChangeDirection`](server/017-11-change-direction.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, which calls `Darkages.exe:0x0046B574` `ui_map_handle_object_direction`. Offset `0x01` is a big-endian object ID and offset `0x05` is a direction value from 0 through 3. |
 | `0x13` | [`SDamageEffect`](server/019-13-damage-effect.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x15` | [`SMapInfo`](server/021-15-map-info.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x17` | [`SAddSpell`](server/023-17-add-spell.md) | Yes | `Darkages.exe:0x00443B10` `sub_443B10`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
-| `0x18` | [`SRemoveSpell`](server/024-18-remove-spell.md) | Yes | `Darkages.exe:0x00443B10` `sub_443B10`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x17` | [`SAddSpell`](server/023-17-add-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x18` | [`SRemoveSpell`](server/024-18-remove-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
 | `0x19` | [`SSoundEffect`](server/025-19-sound-effect.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x1A` | [`SMotion`](server/026-1a-motion.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x1B` | [`SEnterEditingMode`](server/027-1b-enter-editing-mode.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Used for paper editing. |
 | `0x1F` | [`SChangeWeather`](server/031-1f-change-weather.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x20` | [`SChangeHour`](server/032-20-change-hour.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x21` | [`SSelfSaveOk`](server/033-21-self-save-ok.md) | Yes | `Darkages.exe:0x004909E0` `sub_4909E0`. |
+| `0x21` | [`SSelfSaveOk`](server/033-21-self-save-ok.md) | Yes | `Darkages.exe:0x004909E0` `ui_option_pane_handle_server_packet`. |
 | `0x26` | [`SActionChange`](server/038-26-action-change.md) | Yes | `Darkages.exe:0x004234E0` `sub_4234E0`. |
 | `0x29` | [`SEffectLayer`](server/041-29-effect-layer.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x2A` | [`SAddContainer`](server/042-2a-add-container.md) | Yes | `Darkages.exe:0x00425370` `sub_425370`, `Darkages.exe:0x00441850` `sub_441850`. |
 | `0x2B` | [`SRemoveContainer`](server/043-2b-remove-container.md) | Yes | `Darkages.exe:0x00425370` `sub_425370`. |
-| `0x2C` | [`SAddSkill`](server/044-2c-add-skill.md) | Yes | `Darkages.exe:0x00442990` `sub_442990`. |
-| `0x2D` | [`SRemoveSkill`](server/045-2d-remove-skill.md) | Yes | `Darkages.exe:0x00442990` `sub_442990`. |
+| `0x2C` | [`SAddSkill`](server/044-2c-add-skill.md) | Yes | `Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet`. |
+| `0x2D` | [`SRemoveSkill`](server/045-2d-remove-skill.md) | Yes | `Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet`. |
 | `0x2E` | [`SFieldMap`](server/046-2e-field-map.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x2F` | [`SScreenMenu`](server/047-2f-screen-menu.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x00479480` `sub_479480`, `Darkages.exe:0x0047AFD0` `sub_47AFD0`. |
 | `0x30` | [`SPursuitMenu`](server/048-30-pursuit-menu.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x00479480` `sub_479480`. |
-| `0x31` | [`SBulletin`](server/049-31-bulletin.md) | Yes | `Darkages.exe:0x00413CE0` `sub_413CE0`, `Darkages.exe:0x00414260` `sub_414260`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
+| `0x31` | [`SBulletin`](server/049-31-bulletin.md) | Yes | `Darkages.exe:0x00413CE0` `ui_bulletin_session_handle_server_packet`, `Darkages.exe:0x00414260` `ui_bulletin_dialog_handle_server_packet`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x32` | [`SStateObjectState`](server/050-32-state-object-state.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. The mapped branch performs inline tile or object updates. |
 | `0x33` | [`SDrawHumanObject`](server/051-33-draw-human-object.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x34` | [`SObjectInfo`](server/052-34-object-info.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x35` | [`SShowPaper`](server/053-35-show-paper.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x36` | [`SShowUsers`](server/054-36-show-users.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x37` | [`SAddEquip`](server/055-37-add-equip.md) | Yes | `Darkages.exe:0x0042EAF0` `sub_42EAF0`. |
-| `0x38` | [`SRemoveEquip`](server/056-38-remove-equip.md) | Yes | `Darkages.exe:0x0042EAF0` `sub_42EAF0`. |
-| `0x39` | [`SSelfLook`](server/057-39-self-look.md) | Yes | `Darkages.exe:0x0042EAF0` `sub_42EAF0`. |
+| `0x37` | [`SAddEquip`](server/055-37-add-equip.md) | Yes | `Darkages.exe:0x0042EAF0` `ui_equip_pane_handle_server_packet`. |
+| `0x38` | [`SRemoveEquip`](server/056-38-remove-equip.md) | Yes | `Darkages.exe:0x0042EAF0` `ui_equip_pane_handle_server_packet`. |
+| `0x39` | [`SSelfLook`](server/057-39-self-look.md) | Yes | `Darkages.exe:0x0042EAF0` `ui_equip_pane_handle_server_packet`. |
 | `0x3A` | [`SSpelled`](server/058-3a-spelled.md) | Yes | `Darkages.exe:0x0043E8B0` `sub_43E8B0`. |
 | `0x3B` | [`SRequestCRC`](server/059-3b-request-crc.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x3C` | [`SMapPart`](server/060-3c-map-part.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x3D` | [`SLevelPoint`](server/061-3d-level-point.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`. |
 | `0x3E` | [`SWindowChange`](server/062-3e-window-change.md) | Yes | `Darkages.exe:0x0043D650` `sub_43D650`. |
-| `0x3F` | [`SActionCoolTime`](server/063-3f-action-cool-time.md) | Yes | `Darkages.exe:0x00442990` `sub_442990`, `Darkages.exe:0x00443B10` `sub_443B10`. |
+| `0x3F` | [`SActionCoolTime`](server/063-3f-action-cool-time.md) | Yes | `Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet`, `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`. |
 | `0x40` | [`SSendPatch`](server/064-40-send-patch.md) | No | `Darkages.exe:0x004955C0` `sub_4955C0`. XOR bypass. May be used during login or lobby. |
 | `0x42` | [`SExchange`](server/066-42-exchange.md) | Yes | `Darkages.exe:0x00435EA0` `sub_435EA0`, `Darkages.exe:0x004374F0` `sub_4374F0`, `Darkages.exe:0x00437C70` `sub_437C70`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Exchange-session handlers dispatch on a second byte with established subtypes 1 through 5. |
 | `0x48` | [`SSpellDelayCancel`](server/072-48-spell-delay-cancel.md) | Yes | `Darkages.exe:0x004568B0` `sub_4568B0`. |

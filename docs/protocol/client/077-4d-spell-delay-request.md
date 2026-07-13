@@ -14,14 +14,16 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Offset | Width | Field | Established meaning |
 |---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+| `0x00` | 1 | `delay_seconds` | Configured number of one-second delay steps before the held spell packet is submitted. |
 
 ## Queue call sites
 
 | Queue call | Containing IDA function | Function address |
 |---:|---|---:|
-| `Darkages.exe:0x00455CDF` | `sub_455CA4` | `Darkages.exe:0x00455CA4` |
+| `Darkages.exe:0x00455CDF` | `net_c_send_spell_delay_request` | `Darkages.exe:0x00455CA4` |
 
-## Schema status
+## Delay flow
 
-The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.
+`Darkages.exe:0x00455CA4` `net_c_send_spell_delay_request` submits exactly `[0x4D, delay_seconds]`. It is called after the final `CUseSpell` logical packet has already been copied into the spell-delay controller. Timed `CSpellDelaySay` packets follow, and the controller releases the held cast on the final tick.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#spell-delay-sequence).

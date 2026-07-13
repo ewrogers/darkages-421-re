@@ -6,7 +6,10 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 |---:|---|---|---|---|---|---|
 | `Darkages.exe:0x004D64C0` | `app_window_active` | `uint8_t` | Application and Win32 | Records whether the main window is treated as active. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) | Set before the message loop and by `WM_ACTIVATEAPP` handling. |
 | `Darkages.exe:0x004E0F00` | `net_xor_table` | `uint32_t[256]` | Socket transformation | Generated XOR byte table. | [Sequence and XOR Transformation](../protocol/xor-transformation.md#table-generators) | Each dword repeats one byte four times. Initial contents implement function 0. |
+| `Darkages.exe:0x004E2D70` | `ui_bulletin_session` | `void *` | UI and bulletin/mail | Static root of the active heap BulletinSession. | [UI, Input, and Packet Flows](../architecture/ui-network-flows.md#runtime-observation-roots-and-useful-fields) | Child history begins at object `+0xF8`, current index is `+0xF5`, active child is `+0x120`, and request-wait state is `+0x124`. RVA `0x000E2D70`. |
+| `Darkages.exe:0x004E32A4` | `ui_equip_pane` | `void *` | UI and character state | Static root of the persistent heap User Equip pane. | [UI, Input, and Packet Flows](../architecture/ui-network-flows.md#equipment-and-self-look) | Equipment identifiers begin at object `+0xB22`, names at `+0xB3E`, and embedded legend/details ownership at `+0x11CC`. RVA `0x000E32A4`. |
 | `Darkages.exe:0x004E32C0` | `event_manager_instance` | `void *` | Events and network | EventMan singleton that converts worker records into Event objects. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) | Published by `event_manager_ctor` and started separately from `event_dispatcher`. |
+| `Darkages.exe:0x004E3564` | `ui_users_dialog_pane` | `void *` | UI | Static root of the heap Users Dialog Pane. | [UI, Input, and Packet Flows](../architecture/ui-network-flows.md#users-paper-and-server-menus) | Null before the first CWho UI action creates the pane; reused and shown by later SShowUsers replies. RVA `0x000E3564`. |
 | `Darkages.exe:0x004F51AC` | `ui_main_menu_pane` | `void *`, object `0x124` bytes | UI | Current heap `MainMenuPane`. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) | Non-null during the main-menu phase and cleared on transition or teardown. RVA `0x000F51AC`. |
 | `Darkages.exe:0x004F51B0` | `ui_map_pane` | `void *`, object `0xF38` bytes | UI | Current heap `MapPane`. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) | Published after game-pane creation and cleared during game teardown. RVA `0x000F51B0`. |
 | `Darkages.exe:0x004F51B4` | `ui_background_pane` | `void *`, object `0x144` bytes | UI | Current heap `BackgroundPane`. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) | Published with the game UI and cleared during game teardown. RVA `0x000F51B4`. |
@@ -51,6 +54,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x0051C140` | `ui_question_message_face_dialog_vtable` | virtual table | `QuestionMessageFaceDialog` | Runtime class discriminator for the faced question dialog. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | User-dialog and answer virtuals are at `+0x64/+0x74`. |
 | `Darkages.exe:0x0051D700` | `ui_monster_pane2_vtable` | virtual table | `MonsterPane2` | Runtime class discriminator and Event handler table. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | StartMove virtual is at `+0x64`. |
 | `Darkages.exe:0x0051FB00` | `ui_effect_object_pane_vtable` | virtual table | `EffectObjectPane` | Runtime class discriminator and Event handler table. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Timer vslot `+0x44` is class-specific. |
+| `Darkages.exe:0x00520660` | `ui_option_pane_vtable` | virtual table | `OptionPane` | Runtime class discriminator for the main options dialog. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Mouse, key, socket, and timer slots are all class-specific. |
 | `Darkages.exe:0x005207E0` | `ui_exit_wait_pane_vtable` | virtual table | exit-wait pane | Includes the server action `0x4C` handler used by the orderly-exit exchange. | [SReconnect](../protocol/server/076-4c-reconnect.md) | Installed by `ui_exit_wait_pane_ctor`; the source-level C++ class name is not yet established. |
 | `Darkages.exe:0x005213A0` | `ui_pane_vtable` | virtual table | UI | Base Pane lifecycle and event slots. | [UI Panes and Registries](../subsystems/ui-panes.md#common-pane-layout-and-virtual-slots) | Screen slots are `+0x28/+0x2C`; event registration is `+0x30/+0x34`; handlers begin at `+0x38`. |
 | `Darkages.exe:0x00524CA0` | `ui_screen_registry_vtable` | virtual table | UI | Screen composition registry table. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) | Owns packed `0x3F`-byte Screen nodes. |
@@ -61,6 +65,19 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x005282E0` | `ui_skill_book_dialog_vtable` | virtual table | `SkillBookDialog` | Runtime class discriminator for the skill-book dialog. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Draw virtual is at `+0x48`. |
 | `Darkages.exe:0x00529000` | `ui_terminal_pane_vtable` | virtual table | `TerminalPane` | Includes mouse, keyboard, and terminal server-packet handlers. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) | Installed by `ui_terminal_pane_ctor`. |
 | `Darkages.exe:0x0052CFA0` | `ui_weather_pane_vtable` | virtual table | `WeatherPane` | Runtime class discriminator and Event handler table. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Timer and Draw virtuals are class-specific. |
+
+## GameButtons content fields
+
+These offsets are relative to the GameButtons owner found through the Screen or Event hierarchy. They connect persistent visible content to the owner even though the owner itself does not yet have a documented static root.
+
+| Offset | Width | Working field | Reads and writes |
+|---:|---:|---|---|
+| `+0x0124` | 4 | `current_content_pane` | Compared and replaced by all five content selectors. |
+| `+0x0130` | 4 | `chat_pane` | Selected by F/f or content index 3. |
+| `+0x0134` | 4 | `status_pane` | Selected by G/g or content index 4. |
+| `+0x0138` | 4 | `equip_pane` | Selected by A/a or content index 0; same-pane selection can toggle visibility. |
+| `+0x013C` | 4 | `skill_inventory_pane` | Selected by S/s or content index 1. |
+| `+0x0140` | 4 | `spell_inventory_pane` | Selected by D/d or content index 2. |
 
 ## Event dispatcher fields
 

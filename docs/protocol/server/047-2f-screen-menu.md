@@ -26,8 +26,10 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Handler notes
 
-`Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x00479480` `sub_479480`, `Darkages.exe:0x0047AFD0` `sub_47AFD0`.
+`ui_map_dispatch_server_packet` calls `Darkages.exe:0x00469474` `ui_map_handle_screen_menu`, which allocates a `0x104`-byte full-screen pane and calls `ui_screen_menu_pane_ctor`. The constructor adds it below `BackgroundPane`, registers it, and parses the original action `0x2F` packet. The handlers at `0x00479480` and `0x0047AFD0` can receive later menu packets while related panes remain registered.
 
-## Schema status
+## UI response path
 
-The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+Selections and text controls in this menu family send `CMenuCode` `0x39`. Every traced builder copies a server-supplied menu type, big-endian object identifier, and big-endian menu code before variant-specific data.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#users-paper-and-server-menus).

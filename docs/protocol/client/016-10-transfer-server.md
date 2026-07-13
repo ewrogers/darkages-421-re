@@ -1,6 +1,6 @@
 # `CTransferServer` (`0x10`)
 
-[Previous: CSay](014-0e-say.md) | [Client action index](../client-actions.md) | [Next: CChangeDirection](017-11-change-direction.md)
+[Previous: CUseSpell](015-0f-use-spell.md) | [Client action index](../client-actions.md) | [Next: CChangeDirection](017-11-change-direction.md)
 
 `CTransferServer` is client-to-server action `0x10` in the 4.21 protocol.
 

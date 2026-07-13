@@ -24,8 +24,10 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Handler notes
 
-`Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`.
+`ui_map_dispatch_server_packet` calls `Darkages.exe:0x0046C3F4` `ui_map_handle_show_paper`. The handler allocates a `0x560`-byte Paper dialog and calls `ui_paper_dialog_ctor` in mode 1. Its parser copies the server text and flags, then `ui_paper_dialog_build_content` adds the dialog below `BackgroundPane` and registers it for Events.
 
-## Schema status
+## UI flow
 
-The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+This action creates a new dynamic dialog. It does not reuse a static Paper root. `SEnterEditingMode` `0x1B` uses the same class in constructor mode 0. Paper submission can send `CExitEditingMode` `0x23` with a mode byte, big-endian text length, and normalized text.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#users-paper-and-server-menus).

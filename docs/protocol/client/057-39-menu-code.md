@@ -14,7 +14,10 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Offset | Width | Field | Established meaning |
 |---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+| `0x00` | 1 | `menu_type` | Server-supplied menu or interaction type copied from the active menu pane. |
+| `0x01` | 4 | `object_id` | Big-endian server object identifier copied from the active menu pane. |
+| `0x05` | 2 | `menu_code` | Big-endian selected menu code or control identifier. |
+| `0x07` | variable | `variant_data` | Optional selection byte, length-prefixed text, or class-specific values. Absent in the eight-byte logical form. |
 
 ## Queue call sites
 
@@ -30,6 +33,8 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 | `Darkages.exe:0x0047D46D` | `sub_47D3E0` | `Darkages.exe:0x0047D3E0` |
 | `Darkages.exe:0x0047D7DC` | `sub_47D6E4` | `Darkages.exe:0x0047D6E4` |
 
-## Schema status
+## UI flow
 
-The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.
+All nine traced builders share the seven-byte payload prefix above. They are called by controls owned by the dynamic `SScreenMenu` interaction. The simplest form submits eight logical bytes including the action. Other variants append a one-byte length and text, a selection byte, or three small class-specific values.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#users-paper-and-server-menus).

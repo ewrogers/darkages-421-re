@@ -30,6 +30,10 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 `Darkages.exe:0x0041CCA0` `sub_41CCA0`, `Darkages.exe:0x00444690` `sub_444690`, `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x00491520` `sub_491520`.
 
-## Schema status
+In game, MapPane handles only message subtypes `8`, `9`, and `10` in this branch. It reads the big-endian text length at action-relative packet `+2`, changes tab bytes to carriage returns, allocates a dynamic message dialog, and registers it below `BackgroundPane`. Subtype `10` selects the alternate constructor mode; `8` and `9` use mode 0.
 
-The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+## UI behavior
+
+These subtypes create a new dialog rather than updating a static root. Other `SMessage` subtypes are not consumed by this MapPane branch and must not be assumed to share the same dialog format.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#server-actions-that-affect-ui).

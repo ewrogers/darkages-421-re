@@ -20,12 +20,12 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x00442990` | `sub_442990` | Accepts the action in its pane's Event type 9 packet handler. |
-| `Darkages.exe:0x00443B10` | `sub_443B10` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00442990` | `ui_skill_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00443B10` | `ui_spell_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00442990` `sub_442990`, `Darkages.exe:0x00443B10` `sub_443B10`.
+`Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet`, `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`.
 
 ## Schema status
 

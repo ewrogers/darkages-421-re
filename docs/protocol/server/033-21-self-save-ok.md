@@ -12,20 +12,20 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Payload format
 
-| Offset | Width | Field | Established meaning |
-|---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+This action has no payload fields read by the OptionPane handler.
 
 ## Handler functions
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x004909E0` | `sub_4909E0` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x004909E0` | `ui_option_pane_handle_server_packet` | Accepts the action in OptionPane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x004909E0` `sub_4909E0`.
+`Darkages.exe:0x004909E0` `ui_option_pane_handle_server_packet` compares the decoded action byte to `0x21`. It does not read later bytes.
 
-## Schema status
+## UI behavior
 
-The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+While OptionPane is registered, this action allocates and constructs a local message dialog containing "Saved." The packet acknowledges an earlier option save such as `CUserSetting` `0x1B`; it does not create OptionPane itself.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#server-actions-that-affect-ui).

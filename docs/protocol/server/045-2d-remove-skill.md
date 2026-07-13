@@ -20,12 +20,12 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x00442990` | `sub_442990` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00442990` | `ui_skill_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00442990` `sub_442990`.
+`Darkages.exe:0x00442990` `ui_skill_inventory_handle_server_packet` routes this action to the skill-slot removal path. That path unregisters and removes the child, deletes it, and clears the indexed owner pointer.
 
-## Schema status
+## UI behavior
 
-The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+Removing a slot does not hide the parent skill inventory. See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#skill-and-spell-inventories).

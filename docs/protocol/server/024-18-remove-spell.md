@@ -20,13 +20,13 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Function address | Current IDA name | Role |
 |---:|---|---|
-| `Darkages.exe:0x00443B10` | `sub_443B10` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x00443B10` | `ui_spell_inventory_handle_server_packet` | Accepts the action in its pane's Event type 9 packet handler. |
 | `Darkages.exe:0x004889F0` | `sub_4889F0` | Accepts the action in its pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00443B10` `sub_443B10`, `Darkages.exe:0x004889F0` `sub_4889F0`.
+`Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet` routes this action to the spell-slot removal path. That path unregisters and removes the child, deletes it, and clears the indexed owner pointer. `Darkages.exe:0x004889F0` also observes the action in its own pane context.
 
-## Schema status
+## UI behavior
 
-The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+Removing a slot does not hide the parent spell inventory. See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#skill-and-spell-inventories).

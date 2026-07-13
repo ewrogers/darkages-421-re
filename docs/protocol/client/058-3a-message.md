@@ -14,7 +14,12 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 | Offset | Width | Field | Established meaning |
 |---:|---:|---|---|
-| `0x00` | `payload_length` | `unknown_00` | Payload bytes whose field boundaries are not yet mapped. |
+| `0x00` | 1 | `dialog_type` | Type byte retained from the server-created message dialog. |
+| `0x01` | 4 | `object_id` | Big-endian object identifier retained by the dialog. |
+| `0x05` | 2 | `pursuit_id` | Big-endian server pursuit or interaction identifier. |
+| `0x07` | 2 | `next_step` | Big-endian stored step value plus one. |
+| `0x09` | 1 | `response_type` | Value `1` in the confirmed question-answer builders. |
+| `0x0A` | 1 | `answer` | Selected answer index passed to the dialog's answer virtual. |
 
 ## Queue call sites
 
@@ -32,6 +37,8 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 | `Darkages.exe:0x00482B5C` | `sub_482AD0` | `Darkages.exe:0x00482AD0` |
 | `Darkages.exe:0x00482F1C` | `sub_482B70` | `Darkages.exe:0x00482B70` |
 
-## Schema status
+## Confirmed question answer form
 
-The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.
+`ui_question_message_dialog_send_answer` and `ui_question_message_face_dialog_send_answer` each submit 12 logical bytes including the action, exactly matching the fields above. These dialogs are created by `SPursuitMenu` subtypes `2` and `6`. Other `CMessage` builders use related dialog variants and still require separate field comparison before their additional semantics are named.
+
+See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#users-paper-and-server-menus).

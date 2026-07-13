@@ -43,7 +43,7 @@ The application-facing logical packet is:
 
 Action values are not globally unique. A client action and a server action with the same byte can have unrelated meanings. For example, both directions support `0x0D`, but the send builders and receive handlers are separate code paths. Protocol implementations must key dispatch by `(direction, action)`, never by action alone.
 
-The executable contains 51 fixed client action values and 59 server action values. Thirty-five values occur in both directions. A server `0x4B` packet can also ask the client to forward an embedded logical client packet, so that path is not restricted to one statically embedded client action constant.
+The executable contains 52 established client action values and 59 server action values. Fifty-one client values occur directly at `net_c_queue_send` call sites. Action `0x0F` is built by the spell-slot path and reaches the queue through the spell-delay controller. Thirty-five values occur in both directions. A server `0x4B` packet can also ask the client to forward an embedded logical client packet, so that path is not restricted to one statically embedded client action constant.
 
 ### Receive and event routing
 
