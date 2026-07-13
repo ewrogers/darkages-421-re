@@ -2,7 +2,7 @@
 
 [Previous: CTransferServer](016-10-transfer-server.md) | [Client action index](../client-actions.md) | [Next: CAttack](019-13-attack.md)
 
-`CChangeDirection` is the supplied later-client message name for client-direction action `0x11`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CChangeDirection` is client-to-server action `0x11` in the 4.21 protocol.
 
 **Direction:** client to server
 
@@ -25,4 +25,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `CChangeDirection` name is a later-client correlation. Stone emits action `0x11` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
+The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.

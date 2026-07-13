@@ -2,7 +2,7 @@
 
 [Previous: SSpellDelayCancel](072-48-spell-delay-cancel.md) | [Server action index](../server-actions.md) | [Next: SBounce](075-4b-bounce.md)
 
-`SRequestPortrait` is the supplied later-client message name for server-direction action `0x49`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SRequestPortrait` is server-to-client action `0x49` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -28,4 +28,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-Both the later-client `SRequestPortrait` reference and the Stone diagnostic `kServerRequestPortrait` identify this action. The handler initiates client action `0x4F`; its request payload, if any beyond the sentinel, remains to be mapped.
+The 4.21 diagnostic `kServerRequestPortrait` identifies this action. The handler initiates client action `0x4F`; any request payload remains to be mapped.

@@ -2,7 +2,7 @@
 
 [Previous: SRequestPortrait](073-49-request-portrait.md) | [Server action index](../server-actions.md) | [Next: SReconnect](076-4c-reconnect.md)
 
-`SBounce` is the supplied later-client message name for server-direction action `0x4B`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SBounce` is server-to-client action `0x4B` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -31,4 +31,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The later-client `SBounce` name is a cross-version reference. Stone directly establishes the embedded length and forwarding behavior. The server can therefore select a client action dynamically rather than using one of the fixed action constants found in client builders.
+The 4.21 handler establishes the embedded length and forwarding behavior. The server can therefore select a client action dynamically rather than using one of the fixed action constants found in client builders.

@@ -2,7 +2,7 @@
 
 [Server action index](../server-actions.md) | [Next: SNewUserCheck](001-01-new-user-check.md)
 
-`SVersionCheck` is the supplied later-client message name for server-direction action `0x00`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SVersionCheck` is server-to-client action `0x00` in the 4.21 protocol.
 
 **Direction:** server to client
 

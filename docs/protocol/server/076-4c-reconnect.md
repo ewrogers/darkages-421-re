@@ -2,7 +2,7 @@
 
 [Previous: SBounce](075-4b-bounce.md) | [Server action index](../server-actions.md) | [Next: SBlockInput](081-51-block-input.md)
 
-`SReconnect` is the supplied later-client message name for server-direction action `0x4C`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SReconnect` is server-to-client action `0x4C` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -30,4 +30,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `SReconnect` name is retained as the supplied later-client reference, but it does not describe the mapped Stone behavior by itself. `ui_exit_wait_handle_server_packet` claims every `0x4C` packet. For subtype `0x01`, it sets the pane completion flag, sends `CQuit` subtype `0x00`, and replaces the warning with the safe-to-exit text. The paired `ui_exit_wait_pane_ctor` sends `CQuit` subtype `0x01` when the wait pane is created. No Socket connection or reconnect function is called by this handler.
+`SReconnect` is the 4.21 class name. In the mapped exit-wait path, `ui_exit_wait_handle_server_packet` claims every `0x4C` packet. Subtype `0x01` sets the pane completion flag, sends `CQuit` subtype `0x00`, and replaces the warning with the safe-to-exit text. The paired `ui_exit_wait_pane_ctor` sends `CQuit` subtype `0x01` when the wait pane is created. No Socket connection or reconnect function is called by this handler.

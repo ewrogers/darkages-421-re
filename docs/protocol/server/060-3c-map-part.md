@@ -2,7 +2,7 @@
 
 [Previous: SRequestCRC](059-3b-request-crc.md) | [Server action index](../server-actions.md) | [Next: SLevelPoint](061-3d-level-point.md)
 
-`SMapPart` is the supplied later-client message name for server-direction action `0x3C`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SMapPart` is server-to-client action `0x3C` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -28,4 +28,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `SMapPart` name is a later-client cross-version reference. Stone accepts action `0x3C` in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.

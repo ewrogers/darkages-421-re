@@ -2,7 +2,7 @@
 
 [Previous: SSay](013-0d-say.md) | [Server action index](../server-actions.md) | [Next: SAddItem](015-0f-add-item.md)
 
-`SRemoveObjects` is the supplied later-client message name for server-direction action `0x0E`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SRemoveObjects` is server-to-client action `0x0E` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -28,4 +28,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `SRemoveObjects` name is a later-client cross-version reference. Stone accepts action `0x0E` in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.

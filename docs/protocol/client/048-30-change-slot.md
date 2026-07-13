@@ -2,7 +2,7 @@
 
 [Previous: CGroupToggle](047-2f-group-toggle.md) | [Client action index](../client-actions.md) | [Next: CRefreshUser](056-38-refresh-user.md)
 
-`CChangeSlot` is the supplied later-client message name for client-direction action `0x30`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CChangeSlot` is client-to-server action `0x30` in the 4.21 protocol.
 
 **Direction:** client to server
 
@@ -27,4 +27,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `CChangeSlot` name is a later-client correlation. Stone emits action `0x30` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
+The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.

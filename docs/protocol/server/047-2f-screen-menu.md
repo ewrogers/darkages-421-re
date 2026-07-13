@@ -2,7 +2,7 @@
 
 [Previous: SFieldMap](046-2e-field-map.md) | [Server action index](../server-actions.md) | [Next: SPursuitMenu](048-30-pursuit-menu.md)
 
-`SScreenMenu` is the supplied later-client message name for server-direction action `0x2F`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SScreenMenu` is server-to-client action `0x2F` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -30,4 +30,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `SScreenMenu` name is a later-client cross-version reference. Stone accepts action `0x2F` in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.

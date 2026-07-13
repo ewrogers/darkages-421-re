@@ -2,7 +2,7 @@
 
 [Previous: CDrop](008-08-drop.md) | [Client action index](../client-actions.md) | [Next: CPutGround](012-0c-put-ground.md)
 
-`CQuit` is the supplied later-client message name for client-direction action `0x0B`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CQuit` is client-to-server action `0x0B` in the 4.21 protocol.
 
 **Direction:** client to server
 

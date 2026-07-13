@@ -46,10 +46,10 @@ The server action `0x4B` contains a big-endian length followed by a logical clie
 
 ## Current interpretation level
 
-The indexes distinguish evidence and provenance without assigning later-version behavior to Stone automatically:
+The indexes distinguish established action support from payload details that still require tracing:
 
-- An established name is used when instructions, data flow, and diagnostics or visible state changes agree.
-- Direction-prefixed `C...` and `S...` message names are cross-version references supplied from later-client dumps. The Stone notes state which behavior is independently established in 4.21.
+- Direction-prefixed `C...` and `S...` class names identify messages in the 4.21 protocol catalog.
+- Payload fields and behavioral meanings are documented only when instructions, data flow, diagnostics, or visible state changes establish them.
 - Builder and handler addresses are included even when individual payload fields remain to be analyzed.
 
 The indexes are exhaustive for fixed action constants accepted or emitted by the traced Stone packet path. They are not claims that every payload schema is already understood.

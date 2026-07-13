@@ -2,7 +2,7 @@
 
 [Previous: SRemoveItem](016-10-remove-item.md) | [Server action index](../server-actions.md) | [Next: SDamageEffect](019-13-damage-effect.md)
 
-`SChangeDirection` is the supplied later-client message name for server-direction action `0x11`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SChangeDirection` is server-to-client action `0x11` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -31,4 +31,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The later-client `SChangeDirection` name agrees with the Stone data flow. The handler reads `object_id`, locates the map object, and applies `direction` only when its value is from 0 through 3. This payload prefix is established directly from the Stone instructions.
+The handler reads `object_id`, locates the map object, and applies `direction` only when its value is from 0 through 3. This payload prefix is established directly from the 4.21 instructions.

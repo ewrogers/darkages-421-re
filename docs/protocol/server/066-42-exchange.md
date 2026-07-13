@@ -2,7 +2,7 @@
 
 [Previous: SSendPatch](064-40-send-patch.md) | [Server action index](../server-actions.md) | [Next: SSpellDelayCancel](072-48-spell-delay-cancel.md)
 
-`SExchange` is the supplied later-client message name for server-direction action `0x42`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SExchange` is server-to-client action `0x42` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -32,4 +32,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The later-client `SExchange` name agrees with the Stone exchange-pane handlers. The subtype byte and branches 1 through 5 are established. Their individual payload schemas remain to be mapped.
+The 4.21 exchange-pane handlers establish the subtype byte and branches 1 through 5. Their individual payload schemas remain to be mapped.

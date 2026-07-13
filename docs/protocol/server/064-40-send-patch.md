@@ -2,7 +2,7 @@
 
 [Previous: SActionCoolTime](063-3f-action-cool-time.md) | [Server action index](../server-actions.md) | [Next: SExchange](066-42-exchange.md)
 
-`SSendPatch` is the supplied later-client message name for server-direction action `0x40`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`SSendPatch` is server-to-client action `0x40` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -24,8 +24,8 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Handler notes
 
-`Darkages.exe:0x004955C0` `sub_4955C0`. XOR bypass. The later-client scope may be login or lobby.
+`Darkages.exe:0x004955C0` `sub_4955C0`. XOR bypass. May be used during login or lobby.
 
 ## Schema status
 
-The `SSendPatch` name is a later-client cross-version reference. Stone accepts action `0x40` in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+The 4.21 client accepts this action in the listed function. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.

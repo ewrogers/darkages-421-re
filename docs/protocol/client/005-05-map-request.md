@@ -2,7 +2,7 @@
 
 [Previous: CNewUserApperance](004-04-new-user-apperance.md) | [Client action index](../client-actions.md) | [Next: CMove](006-06-move.md)
 
-`CMapRequest` is the supplied later-client message name for client-direction action `0x05`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CMapRequest` is client-to-server action `0x05` in the 4.21 protocol.
 
 **Direction:** client to server
 
@@ -24,4 +24,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `CMapRequest` name is a later-client correlation. Stone emits action `0x05` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
+The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.

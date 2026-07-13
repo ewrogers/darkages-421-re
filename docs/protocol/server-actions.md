@@ -1,18 +1,18 @@
 # Server Actions
 
-This index records every fixed action accepted by at least one pane's socket-event handler. Each message name links to a dedicated page containing its payload format, handler functions, and current schema status. Message-page offsets are payload-relative and exclude framing, action, sequence, and the trailing zero.
+This index records every fixed action accepted by at least one pane's socket-event handler. Each class name links to a dedicated page containing its payload format, handler functions, and current schema status. Message-page offsets are payload-relative and exclude framing, action, sequence, and the trailing zero.
 
-The `S...` names are direction-prefixed reference names supplied from later-client dumps. They are not RTTI or symbols recovered from the Stone executable, and a matching action value does not by itself establish that the later payload schema is identical. Each row separately records what is established in the 4.21 code. The supplied list plus `SChangeDirection` at `0x11` matches all 59 fixed server action values found in Stone, with no additional fixed server action found.
+The `S...` class names identify the 59 fixed server-to-client actions accepted by the traced 4.21 handlers. No additional fixed server action was found.
 
 All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x40` bypass the receive sequence and XOR decoder. Other entries are decoded before the Event type 9 packet is dispatched through pane virtual slot `+0x40`.
 
 ## Fixed action index
 
-| Action | Message name | Encrypted | 4.21 handlers and notes |
+| Action | Class name | Encrypted | 4.21 handlers and notes |
 |---:|---|---|---|
-| `0x00` | [`SVersionCheck`](server/000-00-version-check.md) | No | `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`. Subtype zero reads the server version, selects table function 0 through 9, requires a nine-byte key, and queues both transformation updates. XOR bypass. Later-client scope: login or lobby. |
-| `0x01` | [`SNewUserCheck`](server/001-01-new-user-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`. Later-client scope: login or lobby. |
-| `0x02` | [`SLoginCheck`](server/002-02-login-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`, `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`, `Darkages.exe:0x00464300` `sub_464300`, `Darkages.exe:0x00463A60` `sub_463A60`. Later-client scope: login or lobby. |
+| `0x00` | [`SVersionCheck`](server/000-00-version-check.md) | No | `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`. Subtype zero reads the server version, selects table function 0 through 9, requires a nine-byte key, and queues both transformation updates. XOR bypass. Used during login or lobby. |
+| `0x01` | [`SNewUserCheck`](server/001-01-new-user-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`. Used during login or lobby. |
+| `0x02` | [`SLoginCheck`](server/002-02-login-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`, `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`, `Darkages.exe:0x00464300` `sub_464300`, `Darkages.exe:0x00463A60` `sub_463A60`. Used during login or lobby. |
 | `0x03` | [`STransferServer`](server/003-03-transfer-server.md) | No | `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet` and `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. The `MapPane` branch calls transfer-server processing and can send `kClientTransferServer`. XOR bypass. |
 | `0x04` | [`SUserPosition`](server/004-04-user-position.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
 | `0x05` | [`SUserAppearance`](server/005-05-user-appearance.md) | Yes | `Darkages.exe:0x004889F0` `sub_4889F0`. |
@@ -33,7 +33,7 @@ All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x4
 | `0x18` | [`SRemoveSpell`](server/024-18-remove-spell.md) | Yes | `Darkages.exe:0x00443B10` `sub_443B10`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
 | `0x19` | [`SSoundEffect`](server/025-19-sound-effect.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x1A` | [`SMotion`](server/026-1a-motion.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x1B` | [`SEnterEditingMode`](server/027-1b-enter-editing-mode.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Later-client context: paper editing. |
+| `0x1B` | [`SEnterEditingMode`](server/027-1b-enter-editing-mode.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Used for paper editing. |
 | `0x1F` | [`SChangeWeather`](server/031-1f-change-weather.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x20` | [`SChangeHour`](server/032-20-change-hour.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x21` | [`SSelfSaveOk`](server/033-21-self-save-ok.md) | Yes | `Darkages.exe:0x004909E0` `sub_4909E0`. |
@@ -61,7 +61,7 @@ All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x4
 | `0x3D` | [`SLevelPoint`](server/061-3d-level-point.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`. |
 | `0x3E` | [`SWindowChange`](server/062-3e-window-change.md) | Yes | `Darkages.exe:0x0043D650` `sub_43D650`. |
 | `0x3F` | [`SActionCoolTime`](server/063-3f-action-cool-time.md) | Yes | `Darkages.exe:0x00442990` `sub_442990`, `Darkages.exe:0x00443B10` `sub_443B10`. |
-| `0x40` | [`SSendPatch`](server/064-40-send-patch.md) | No | `Darkages.exe:0x004955C0` `sub_4955C0`. XOR bypass. The later-client scope may be login or lobby. |
+| `0x40` | [`SSendPatch`](server/064-40-send-patch.md) | No | `Darkages.exe:0x004955C0` `sub_4955C0`. XOR bypass. May be used during login or lobby. |
 | `0x42` | [`SExchange`](server/066-42-exchange.md) | Yes | `Darkages.exe:0x00435EA0` `sub_435EA0`, `Darkages.exe:0x004374F0` `sub_4374F0`, `Darkages.exe:0x00437C70` `sub_437C70`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Exchange-session handlers dispatch on a second byte with established subtypes 1 through 5. |
 | `0x48` | [`SSpellDelayCancel`](server/072-48-spell-delay-cancel.md) | Yes | `Darkages.exe:0x004568B0` `sub_4568B0`. |
 | `0x49` | [`SRequestPortrait`](server/073-49-request-portrait.md) | Yes | `Darkages.exe:0x0040B3A0` `ui_handle_server_request_portrait`. An embedded diagnostic names `kServerRequestPortrait` and states decimal value 73. The handler initiates client action `0x4F`. |

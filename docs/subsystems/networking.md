@@ -169,7 +169,7 @@ per-action packet builder
 | `0x32` | Inline tile or object updates. |
 | `0x4B` | `net_forward_embedded_client_packet`, which reads a big-endian embedded length and sends the embedded logical client packet. |
 
-The complete accepted set and all other pane handlers are in the [server action index](../protocol/server-actions.md). The separate exit-wait pane handles server action `0x4C`. Despite its later-client `SReconnect` reference name, the Stone subtype-one branch completes an orderly-exit exchange and does not call the Socket reconnect path.
+The complete accepted set and all other pane handlers are in the [server action index](../protocol/server-actions.md). The separate exit-wait pane handles `SReconnect`, server action `0x4C`. Its subtype-one branch completes an orderly-exit exchange and does not call the Socket reconnect path.
 
 ## Function table
 

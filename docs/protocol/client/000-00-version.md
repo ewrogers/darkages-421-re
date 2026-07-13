@@ -2,7 +2,7 @@
 
 [Client action index](../client-actions.md) | [Next: CNewUser](002-02-new-user.md)
 
-`CVersion` is the supplied later-client message name for client-direction action `0x00`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CVersion` is client-to-server action `0x00` in the 4.21 protocol.
 
 **Direction:** client to server
 

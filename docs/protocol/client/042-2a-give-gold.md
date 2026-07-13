@@ -2,7 +2,7 @@
 
 [Previous: CGive](041-29-give.md) | [Client action index](../client-actions.md) | [Next: CSelfLook](045-2d-self-look.md)
 
-`CGiveGold` is the supplied later-client message name for client-direction action `0x2A`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CGiveGold` is client-to-server action `0x2A` in the 4.21 protocol.
 
 **Direction:** client to server
 
@@ -24,4 +24,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `CGiveGold` name is a later-client correlation. Stone emits action `0x2A` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
+The 4.21 client emits this action at the listed sites. The payload fields and client-side trigger still require tracing.

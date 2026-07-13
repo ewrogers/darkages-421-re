@@ -25,8 +25,9 @@ Make pages useful as both a guided explanation and a lookup reference. A reader 
 2. Only publish behavior that is confirmed directly from the code or supported with high confidence by code patterns and observed behavior.
 3. Do not derive behavior from names or nearby strings alone. Trace instructions, call sites, data flow, state changes, or runtime behavior.
 4. Do not use em dashes or emojis.
-5. Do not copy large decompiler listings. Explain behavior in original prose and use small C-like pseudocode when it improves clarity.
+5. Do not copy large decompiler listings. Explain behavior in original prose and use small, simple C pseudocode when it improves clarity.
 6. Do not patch the executable as part of documentation work unless the task explicitly requires a controlled experiment.
+7. Pseudocode must use descriptive identifiers. Do not use single-letter names for algorithm state, inputs, outputs, counters, or intermediate values.
 
 ## Documentation model
 
@@ -52,7 +53,7 @@ Describe the implementation as a call tree or ordered path through the code. Inc
 - Globals, object fields, buffers, or tables read and written
 - Ownership, lifetime, failure paths, and cleanup
 
-Use short C-like pseudocode where a decision or algorithm is clearer as code. A pseudocode identifier is explanatory and does not imply that the original program used that source-level name.
+Use short C pseudocode where a decision or algorithm is clearer as code. A pseudocode identifier is explanatory and does not imply that the original program used that source-level name.
 
 ### Function table
 
@@ -135,7 +136,7 @@ Write in direct, natural English. Start with what a component does, then explain
 
 Prefer short paragraphs and concrete names. Use tables for packet fields, file layouts, state values, and function references. Use diagrams only when they make control or data flow easier to understand.
 
-Pseudocode must be implementation-neutral C-like code. Use fixed-width types such as `uint8_t` when the width is established. Show byte order explicitly.
+Pseudocode must be simple, implementation-neutral C99, not C++. Do not use classes, templates, references, method syntax, operator overloading, lambdas, `auto`, RAII, or standard-library containers. Use fixed-width types such as `uint8_t` when the width is established. Use descriptive snake-case identifiers, including for loop counters and intermediate values. Do not introduce single-letter mathematical aliases before a code block. Show byte order explicitly.
 
 ## Protocol and format rules
 

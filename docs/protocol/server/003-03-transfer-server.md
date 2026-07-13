@@ -2,7 +2,7 @@
 
 [Previous: SLoginCheck](002-02-login-check.md) | [Server action index](../server-actions.md) | [Next: SUserPosition](004-04-user-position.md)
 
-`STransferServer` is the supplied later-client message name for server-direction action `0x03`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`STransferServer` is server-to-client action `0x03` in the 4.21 protocol.
 
 **Direction:** server to client
 
@@ -29,4 +29,4 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## Schema status
 
-The `STransferServer` name is a later-client cross-version reference. Stone accepts action `0x03` in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.
+The 4.21 client accepts this action in the listed functions. Payload field division remains a placeholder until its readers and client-side effects are traced end to end.

@@ -2,7 +2,7 @@
 
 [Previous: CSay](014-0e-say.md) | [Client action index](../client-actions.md) | [Next: CChangeDirection](017-11-change-direction.md)
 
-`CTransferServer` is the supplied later-client message name for client-direction action `0x10`. It is not RTTI or a symbol recovered from the 4.21 executable.
+`CTransferServer` is client-to-server action `0x10` in the 4.21 protocol.
 
 **Direction:** client to server
 
