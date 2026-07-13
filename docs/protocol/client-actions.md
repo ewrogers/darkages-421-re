@@ -10,7 +10,7 @@ All entries use the client-to-server direction. The send queue appends a zero se
 
 ## Fixed action index
 
-| Action | Later-client reference name | Stone send sites and established notes |
+| Action | Message name | Stone send sites and established notes |
 |---:|---|---|
 | `0x00` | `CVersion` | `Darkages.exe:0x004AD6A3`. Logical fields are action, a big-endian data-version `uint16_t`, and ASCII `LK`; the builder submits 5 bytes before the send queue adds the sentinel. XOR bypass. The later-client scope is lobby or login. |
 | `0x02` | `CNewUser` | `Darkages.exe:0x00462730`. The later-client scope is lobby or login; the Stone payload semantics are not yet independently established. |
@@ -51,7 +51,7 @@ All entries use the client-to-server direction. The send queue appends a zero se
 | `0x3F` | `CFieldMap` | `Darkages.exe:0x0043953A`. Stone payload semantics not yet independently established. |
 | `0x41` | `CGetParcel` | `Darkages.exe:0x00494E2C`. Stone payload semantics not yet independently established. |
 | `0x42` | `CException` | `Darkages.exe:0x00434B43`. Stone payload semantics not yet independently established. |
-| `0x43` | `CInteract` | `Darkages.exe:0x0047B755`, `Darkages.exe:0x00488723`, `Darkages.exe:0x0048C820`, `Darkages.exe:0x0048F17F`. |
+| `0x43` | `CRequestObjectInfo` | `Darkages.exe:0x0047B755`, `Darkages.exe:0x00488723`, `Darkages.exe:0x0048C820`, `Darkages.exe:0x0048F17F`. |
 | `0x44` | `CRemoveEquip` | `Darkages.exe:0x0042F8E2`. Stone payload semantics not yet independently established. |
 | `0x45` | `CReplyCRC` | `Darkages.exe:0x00465522`. Stone payload semantics not yet independently established. |
 | `0x46` | `CGroupView` | `Darkages.exe:0x0042F919`. Stone payload semantics not yet independently established. |

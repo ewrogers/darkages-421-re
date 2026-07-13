@@ -31,6 +31,7 @@
   - [Client to Server](protocol/client-actions.md)
     - [Client Message Directory](protocol/client-messages.md)
   - [Server to Client](protocol/server-actions.md)
+    - [Server Message Directory](protocol/server-messages.md)
 
 # Appendices
 

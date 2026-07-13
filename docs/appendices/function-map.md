@@ -37,6 +37,9 @@ This appendix is a cross-subsystem index of important functions, grouped by prim
 | `Darkages.exe:0x0040B3A0` | `ui_handle_server_request_portrait` | Network and UI | `int __thiscall(void *this, void *event)` | Handle server action `0x49`. | [Server actions](../protocol/server-actions.md) |
 | `Darkages.exe:0x0045F780` | `ui_main_menu_handle_server_packet` | Network and UI | `int __thiscall(void *this, void *event)` | Handle initial main-menu server packets. | [Server actions](../protocol/server-actions.md) |
 | `Darkages.exe:0x00468A90` | `ui_map_dispatch_server_packet` | Network and UI | `int __thiscall(void *this, void *event)` | Dispatch 31 in-game server actions. | [Server actions](../protocol/server-actions.md#mappane-switch-coverage) |
+| `Darkages.exe:0x0046B574` | `ui_map_handle_object_direction` | Network and UI | `int __thiscall(void *this, const uint8_t *packet)` | Apply server action `0x11` to a map object's direction. | [SChangeDirection](../protocol/server-messages.md#0x11-schangedirection) |
+| `Darkages.exe:0x004921F0` | `ui_exit_wait_handle_server_packet` | Network and UI | `int __thiscall(void *this, void *event)` | Complete the subtype-one safe-exit exchange for server action `0x4C`. | [SReconnect](../protocol/server-messages.md#0x4c-sreconnect) |
+| `Darkages.exe:0x00492310` | `ui_exit_wait_pane_ctor` | UI and network | established `__thiscall` constructor | Create the exit-wait pane and send `CQuit` subtype `0x01`. | [SReconnect](../protocol/server-messages.md#0x4c-sreconnect) |
 | `Darkages.exe:0x004A2ED0` | `ui_server_select_handle_server_packet` | Network and UI | `int __thiscall(void *this, void *event)` | Deserialize the action `0x56` server table. | [Server actions](../protocol/server-actions.md) |
 
 ## Windows integration

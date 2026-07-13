@@ -2,7 +2,7 @@
 
 The networking subsystem owns the active transport, turns a byte stream into packet bodies, applies the protocol's XOR transformations, and moves decoded server packets into the pane event hierarchy. Client packet builders use raw byte arrays and the same small big-endian field writers.
 
-The directional action indexes are [Client actions](../protocol/client-actions.md) and [Server actions](../protocol/server-actions.md).
+The directional action indexes are [Client actions](../protocol/client-actions.md) and [Server actions](../protocol/server-actions.md). Their per-message expansions are the [Client Message Directory](../protocol/client-messages.md) and [Server Message Directory](../protocol/server-messages.md).
 
 ## High-level operation
 
@@ -211,10 +211,11 @@ per-action packet builder
 | `0x03` | Transfer-server processing. |
 | `0x0A` | Secondary subtype dispatch within `MapPane`. |
 | `0x0E` | Delete an object from map state. |
+| `0x11` | `ui_map_handle_object_direction`, which reads a big-endian object ID and a direction from 0 through 3. |
 | `0x32` | Inline tile or object updates. |
 | `0x4B` | `net_forward_embedded_client_packet`, which reads a big-endian embedded length and sends the embedded logical client packet. |
 
-The complete accepted set and all other pane handlers are in the [server action index](../protocol/server-actions.md).
+The complete accepted set and all other pane handlers are in the [server action index](../protocol/server-actions.md). The separate exit-wait pane handles server action `0x4C`. Despite its later-client `SReconnect` reference name, the Stone subtype-one branch completes an orderly-exit exchange and does not call the Socket reconnect path.
 
 ## Function table
 
@@ -248,8 +249,11 @@ The complete accepted set and all other pane handlers are in the [server action 
 | `Darkages.exe:0x004A8414` | `net_set_xor_key` | `void __stdcall(int length, const uint8_t *key)` | Replace the runtime XOR key. | Requires length at most 9 and writes four repeated copies. |
 | `Darkages.exe:0x004A8590` | `net_build_xor_table` | `void __stdcall(int function_index)` | Generate the 256-entry XOR table. | Accepts function indexes 0 through 9. |
 | `Darkages.exe:0x00468A90` | `ui_map_dispatch_server_packet` | `int __thiscall(void *this, void *event)` | Dispatch in-game server actions in `MapPane`. | Supports 31 fixed action values. |
+| `Darkages.exe:0x0046B574` | `ui_map_handle_object_direction` | `int __thiscall(void *this, const uint8_t *packet)` | Apply a server direction update to a map object. | Called by the `MapPane` action `0x11` branch; reads a big-endian object ID at `+0x01` and direction at `+0x05`. |
 | `Darkages.exe:0x0046CA54` | `net_forward_embedded_client_packet` | established `MapPane` action handler | Forward the client packet embedded in server action `0x4B`. | Reads a big-endian length and calls `net_c_queue_send`. |
 | `Darkages.exe:0x0045F780` | `ui_main_menu_handle_server_packet` | `int __thiscall(void *this, void *event)` | Handle main-menu server actions. | Supports `0x00`, `0x02`, `0x03`, and `0x0A`. |
+| `Darkages.exe:0x004921F0` | `ui_exit_wait_handle_server_packet` | `int __thiscall(void *this, void *event)` | Handle server action `0x4C` in the exit-wait pane. | Subtype `0x01` sends `CQuit` subtype `0x00` and displays the safe-exit text; no reconnect call is made. |
+| `Darkages.exe:0x00492310` | `ui_exit_wait_pane_ctor` | established `__thiscall` constructor | Create the exit-wait pane. | Displays the wait warning and sends `CQuit` subtype `0x01`. |
 | `Darkages.exe:0x004A2ED0` | `ui_server_select_handle_server_packet` | `int __thiscall(void *this, void *event)` | Deserialize the server table from action `0x56`. | Owns and replaces the per-server entry allocation. |
 | `Darkages.exe:0x0040B3A0` | `ui_handle_server_request_portrait` | `int __thiscall(void *this, void *event)` | Handle `kServerRequestPortrait`, action `0x49`. | Calls `net_c_build_portrait_response`. |
 | `Darkages.exe:0x0040A664` | `net_c_build_portrait_response` | established `__thiscall` builder | Build client action `0x4F` from a local portrait. | Called after server action `0x49`. |

@@ -4,6 +4,8 @@ This directory expands the compact [client action index](client-actions.md) into
 
 The `C...` identifiers are later-client reference names. They are not RTTI recovered from Stone. Placeholder fields identify only established offsets and ownership boundaries; they do not assign unverified payload meanings.
 
+In this directory, `Encrypted: Yes` is protocol shorthand for a sequence-bearing packet whose payload and sentinel are XOR-transformed. It consumes one client send-sequence value. `Encrypted: No` means the sequence byte and XOR passes are both omitted. The label describes the protocol branch and does not claim cryptographic security.
+
 ## Common shape conventions
 
 A packet builder submits `logical_length` bytes beginning with the action. `net_c_queue_send` copies those bytes and appends the zero sentinel. Ordinary packets then acquire a sequence byte and XOR transformation. Actions `0x00`, `0x10`, and `0x48` remain cleartext and do not consume the sequence.
@@ -19,65 +21,65 @@ The per-message tables account for 118 direct fixed-action calls to `net_c_queue
 
 ## Directory
 
-| Action | Reference name | Wire treatment | Direct queue calls |
+| Action | Message name | Encrypted | Direct queue calls |
 |---:|---|---|---:|
-| `0x00` | [`CVersion`](#0x00-cversion) | Cleartext, no sequence consumed | 1 |
-| `0x02` | [`CNewUser`](#0x02-cnewuser) | XOR-transformed, sequence consumed | 1 |
-| `0x03` | [`CLogin`](#0x03-clogin) | XOR-transformed, sequence consumed | 1 |
-| `0x04` | [`CNewUserApperance`](#0x04-cnewuserapperance) | XOR-transformed, sequence consumed | 1 |
-| `0x05` | [`CMapRequest`](#0x05-cmaprequest) | XOR-transformed, sequence consumed | 1 |
-| `0x06` | [`CMove`](#0x06-cmove) | XOR-transformed, sequence consumed | 1 |
-| `0x07` | [`CGet`](#0x07-cget) | XOR-transformed, sequence consumed | 1 |
-| `0x08` | [`CDrop`](#0x08-cdrop) | XOR-transformed, sequence consumed | 1 |
-| `0x0B` | [`CQuit`](#0x0b-cquit) | XOR-transformed, sequence consumed | 6 |
-| `0x0C` | [`CPutGround`](#0x0c-cputground) | XOR-transformed, sequence consumed | 1 |
-| `0x0D` | [`CBlockListen`](#0x0d-cblocklisten) | XOR-transformed, sequence consumed | 3 |
-| `0x0E` | [`CSay`](#0x0e-csay) | XOR-transformed, sequence consumed | 4 |
-| `0x10` | [`CTransferServer`](#0x10-ctransferserver) | Cleartext, no sequence consumed | 3 |
-| `0x11` | [`CChangeDirection`](#0x11-cchangedirection) | XOR-transformed, sequence consumed | 2 |
-| `0x13` | [`CAttack`](#0x13-cattack) | XOR-transformed, sequence consumed | 1 |
-| `0x18` | [`CWho`](#0x18-cwho) | XOR-transformed, sequence consumed | 1 |
-| `0x19` | [`CWhisper`](#0x19-cwhisper) | XOR-transformed, sequence consumed | 1 |
-| `0x1B` | [`CUserSetting`](#0x1b-cusersetting) | XOR-transformed, sequence consumed | 1 |
-| `0x1C` | [`CUse`](#0x1c-cuse) | XOR-transformed, sequence consumed | 1 |
-| `0x1D` | [`CEmotion`](#0x1d-cemotion) | XOR-transformed, sequence consumed | 1 |
-| `0x23` | [`CExitEditingMode`](#0x23-cexiteditingmode) | XOR-transformed, sequence consumed | 2 |
-| `0x24` | [`CDropGold`](#0x24-cdropgold) | XOR-transformed, sequence consumed | 1 |
-| `0x26` | [`CChangePassword`](#0x26-cchangepassword) | XOR-transformed, sequence consumed | 2 |
-| `0x29` | [`CGive`](#0x29-cgive) | XOR-transformed, sequence consumed | 1 |
-| `0x2A` | [`CGiveGold`](#0x2a-cgivegold) | XOR-transformed, sequence consumed | 1 |
-| `0x2D` | [`CSelfLook`](#0x2d-cselflook) | XOR-transformed, sequence consumed | 1 |
-| `0x2E` | [`CGroup`](#0x2e-cgroup) | XOR-transformed, sequence consumed | 1 |
-| `0x2F` | [`CGroupToggle`](#0x2f-cgrouptoggle) | XOR-transformed, sequence consumed | 1 |
-| `0x30` | [`CChangeSlot`](#0x30-cchangeslot) | XOR-transformed, sequence consumed | 4 |
-| `0x38` | [`CRefreshUser`](#0x38-crefreshuser) | XOR-transformed, sequence consumed | 1 |
-| `0x39` | [`CMenuCode`](#0x39-cmenucode) | XOR-transformed, sequence consumed | 9 |
-| `0x3A` | [`CMessage`](#0x3a-cmessage) | XOR-transformed, sequence consumed | 11 |
-| `0x3B` | [`CBulletin`](#0x3b-cbulletin) | XOR-transformed, sequence consumed | 15 |
-| `0x3C` | [`CPutToContainer`](#0x3c-cputtocontainer) | XOR-transformed, sequence consumed | 1 |
-| `0x3D` | [`CGetFromContainer`](#0x3d-cgetfromcontainer) | XOR-transformed, sequence consumed | 2 |
-| `0x3E` | [`CUseSkill`](#0x3e-cuseskill) | XOR-transformed, sequence consumed | 1 |
-| `0x3F` | [`CFieldMap`](#0x3f-cfieldmap) | XOR-transformed, sequence consumed | 1 |
-| `0x41` | [`CGetParcel`](#0x41-cgetparcel) | XOR-transformed, sequence consumed | 1 |
-| `0x42` | [`CException`](#0x42-cexception) | XOR-transformed, sequence consumed | 1 |
-| `0x43` | [`CInteract`](#0x43-cinteract) | XOR-transformed, sequence consumed | 4 |
-| `0x44` | [`CRemoveEquip`](#0x44-cremoveequip) | XOR-transformed, sequence consumed | 1 |
-| `0x45` | [`CReplyCRC`](#0x45-creplycrc) | XOR-transformed, sequence consumed | 1 |
-| `0x46` | [`CGroupView`](#0x46-cgroupview) | XOR-transformed, sequence consumed | 1 |
-| `0x47` | [`CAddStat`](#0x47-caddstat) | XOR-transformed, sequence consumed | 1 |
-| `0x48` | [`CRequestPatch`](#0x48-crequestpatch) | Cleartext, no sequence consumed | 4 |
-| `0x4A` | [`CExchange`](#0x4a-cexchange) | XOR-transformed, sequence consumed | 7 |
-| `0x4D` | [`CSpellDelayRequest`](#0x4d-cspelldelayrequest) | XOR-transformed, sequence consumed | 1 |
-| `0x4E` | [`CSpellDelaySay`](#0x4e-cspelldelaysay) | XOR-transformed, sequence consumed | 4 |
-| `0x4F` | [`CSendPortrait`](#0x4f-csendportrait) | XOR-transformed, sequence consumed | 1 |
-| `0x57` | [`CMulti`](#0x57-cmulti) | XOR-transformed, sequence consumed | 2 |
-| `0x62` | [`baram`](#0x62-baram) | XOR-transformed, sequence consumed | 1 |
+| `0x00` | [`CVersion`](#0x00-cversion) | No | 1 |
+| `0x02` | [`CNewUser`](#0x02-cnewuser) | Yes | 1 |
+| `0x03` | [`CLogin`](#0x03-clogin) | Yes | 1 |
+| `0x04` | [`CNewUserApperance`](#0x04-cnewuserapperance) | Yes | 1 |
+| `0x05` | [`CMapRequest`](#0x05-cmaprequest) | Yes | 1 |
+| `0x06` | [`CMove`](#0x06-cmove) | Yes | 1 |
+| `0x07` | [`CGet`](#0x07-cget) | Yes | 1 |
+| `0x08` | [`CDrop`](#0x08-cdrop) | Yes | 1 |
+| `0x0B` | [`CQuit`](#0x0b-cquit) | Yes | 6 |
+| `0x0C` | [`CPutGround`](#0x0c-cputground) | Yes | 1 |
+| `0x0D` | [`CBlockListen`](#0x0d-cblocklisten) | Yes | 3 |
+| `0x0E` | [`CSay`](#0x0e-csay) | Yes | 4 |
+| `0x10` | [`CTransferServer`](#0x10-ctransferserver) | No | 3 |
+| `0x11` | [`CChangeDirection`](#0x11-cchangedirection) | Yes | 2 |
+| `0x13` | [`CAttack`](#0x13-cattack) | Yes | 1 |
+| `0x18` | [`CWho`](#0x18-cwho) | Yes | 1 |
+| `0x19` | [`CWhisper`](#0x19-cwhisper) | Yes | 1 |
+| `0x1B` | [`CUserSetting`](#0x1b-cusersetting) | Yes | 1 |
+| `0x1C` | [`CUse`](#0x1c-cuse) | Yes | 1 |
+| `0x1D` | [`CEmotion`](#0x1d-cemotion) | Yes | 1 |
+| `0x23` | [`CExitEditingMode`](#0x23-cexiteditingmode) | Yes | 2 |
+| `0x24` | [`CDropGold`](#0x24-cdropgold) | Yes | 1 |
+| `0x26` | [`CChangePassword`](#0x26-cchangepassword) | Yes | 2 |
+| `0x29` | [`CGive`](#0x29-cgive) | Yes | 1 |
+| `0x2A` | [`CGiveGold`](#0x2a-cgivegold) | Yes | 1 |
+| `0x2D` | [`CSelfLook`](#0x2d-cselflook) | Yes | 1 |
+| `0x2E` | [`CGroup`](#0x2e-cgroup) | Yes | 1 |
+| `0x2F` | [`CGroupToggle`](#0x2f-cgrouptoggle) | Yes | 1 |
+| `0x30` | [`CChangeSlot`](#0x30-cchangeslot) | Yes | 4 |
+| `0x38` | [`CRefreshUser`](#0x38-crefreshuser) | Yes | 1 |
+| `0x39` | [`CMenuCode`](#0x39-cmenucode) | Yes | 9 |
+| `0x3A` | [`CMessage`](#0x3a-cmessage) | Yes | 11 |
+| `0x3B` | [`CBulletin`](#0x3b-cbulletin) | Yes | 15 |
+| `0x3C` | [`CPutToContainer`](#0x3c-cputtocontainer) | Yes | 1 |
+| `0x3D` | [`CGetFromContainer`](#0x3d-cgetfromcontainer) | Yes | 2 |
+| `0x3E` | [`CUseSkill`](#0x3e-cuseskill) | Yes | 1 |
+| `0x3F` | [`CFieldMap`](#0x3f-cfieldmap) | Yes | 1 |
+| `0x41` | [`CGetParcel`](#0x41-cgetparcel) | Yes | 1 |
+| `0x42` | [`CException`](#0x42-cexception) | Yes | 1 |
+| `0x43` | [`CRequestObjectInfo`](#0x43-crequestobjectinfo) | Yes | 4 |
+| `0x44` | [`CRemoveEquip`](#0x44-cremoveequip) | Yes | 1 |
+| `0x45` | [`CReplyCRC`](#0x45-creplycrc) | Yes | 1 |
+| `0x46` | [`CGroupView`](#0x46-cgroupview) | Yes | 1 |
+| `0x47` | [`CAddStat`](#0x47-caddstat) | Yes | 1 |
+| `0x48` | [`CRequestPatch`](#0x48-crequestpatch) | No | 4 |
+| `0x4A` | [`CExchange`](#0x4a-cexchange) | Yes | 7 |
+| `0x4D` | [`CSpellDelayRequest`](#0x4d-cspelldelayrequest) | Yes | 1 |
+| `0x4E` | [`CSpellDelaySay`](#0x4e-cspelldelaysay) | Yes | 4 |
+| `0x4F` | [`CSendPortrait`](#0x4f-csendportrait) | Yes | 1 |
+| `0x57` | [`CMulti`](#0x57-cmulti) | Yes | 2 |
+| `0x62` | [`baram`](#0x62-baram) | Yes | 1 |
 
 ## `0x00` `CVersion`
 
 **Direction:** client to server
 
-**Wire treatment:** Cleartext, no sequence consumed.
+**Encrypted:** No.
 
 ### Logical shape
 
@@ -102,7 +104,7 @@ The Stone builder establishes the complete five-byte submitted shape. The later-
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -126,7 +128,7 @@ The `CNewUser` name is a later-client correlation. Stone emits action `0x02` at 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -150,7 +152,7 @@ The `CLogin` name is a later-client correlation. Stone emits action `0x03` at th
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -174,7 +176,7 @@ The `CNewUserApperance` name is a later-client correlation. Stone emits action `
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -198,7 +200,7 @@ The `CMapRequest` name is a later-client correlation. Stone emits action `0x05` 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -222,7 +224,7 @@ The `CMove` name is a later-client correlation. Stone emits action `0x06` at the
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -246,7 +248,7 @@ The `CGet` name is a later-client correlation. Stone emits action `0x07` at the 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -270,7 +272,7 @@ The `CDrop` name is a later-client correlation. Stone emits action `0x08` at the
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -299,7 +301,7 @@ The `CQuit` name is a later-client correlation. Stone emits action `0x0B` at the
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -323,7 +325,7 @@ The `CPutGround` name is a later-client correlation. Stone emits action `0x0C` a
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -349,7 +351,7 @@ The `CBlockListen` name is a later-client correlation. Stone emits action `0x0D`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -376,7 +378,7 @@ The `CSay` name is a later-client correlation. Stone emits action `0x0E` at the 
 
 **Direction:** client to server
 
-**Wire treatment:** Cleartext, no sequence consumed.
+**Encrypted:** No.
 
 ### Logical shape
 
@@ -402,7 +404,7 @@ The payload fields remain placeholders. Stone diagnostics independently name `kC
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -427,7 +429,7 @@ The `CChangeDirection` name is a later-client correlation. Stone emits action `0
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -451,7 +453,7 @@ The `CAttack` name is a later-client correlation. Stone emits action `0x13` at t
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -475,7 +477,7 @@ The `CWho` name is a later-client correlation. Stone emits action `0x18` at the 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -499,7 +501,7 @@ The `CWhisper` name is a later-client correlation. Stone emits action `0x19` at 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -523,7 +525,7 @@ The `CUserSetting` name is a later-client correlation. Stone emits action `0x1B`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -547,7 +549,7 @@ The `CUse` name is a later-client correlation. Stone emits action `0x1C` at the 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -571,7 +573,7 @@ The `CEmotion` name is a later-client correlation. Stone emits action `0x1D` at 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -596,7 +598,7 @@ The `CExitEditingMode` name is a later-client correlation. Stone emits action `0
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -620,7 +622,7 @@ The `CDropGold` name is a later-client correlation. Stone emits action `0x24` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -645,7 +647,7 @@ The `CChangePassword` name is a later-client correlation. Stone emits action `0x
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -669,7 +671,7 @@ The `CGive` name is a later-client correlation. Stone emits action `0x29` at the
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -693,7 +695,7 @@ The `CGiveGold` name is a later-client correlation. Stone emits action `0x2A` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -717,7 +719,7 @@ The `CSelfLook` name is a later-client correlation. Stone emits action `0x2D` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -741,7 +743,7 @@ The `CGroup` name is a later-client correlation. Stone emits action `0x2E` at th
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -765,7 +767,7 @@ The `CGroupToggle` name is a later-client correlation. Stone emits action `0x2F`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -792,7 +794,7 @@ The `CChangeSlot` name is a later-client correlation. Stone emits action `0x30` 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -816,7 +818,7 @@ The `CRefreshUser` name is a later-client correlation. Stone emits action `0x38`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -848,7 +850,7 @@ The `CMenuCode` name is a later-client correlation. Stone emits action `0x39` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -882,7 +884,7 @@ The `CMessage` name is a later-client correlation. Stone emits action `0x3A` at 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -920,7 +922,7 @@ The `CBulletin` name is a later-client correlation. Stone emits action `0x3B` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -944,7 +946,7 @@ The `CPutToContainer` name is a later-client correlation. Stone emits action `0x
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -969,7 +971,7 @@ The `CGetFromContainer` name is a later-client correlation. Stone emits action `
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -993,7 +995,7 @@ The `CUseSkill` name is a later-client correlation. Stone emits action `0x3E` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1017,7 +1019,7 @@ The `CFieldMap` name is a later-client correlation. Stone emits action `0x3F` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1041,7 +1043,7 @@ The `CGetParcel` name is a later-client correlation. Stone emits action `0x41` a
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1061,11 +1063,11 @@ The `CGetParcel` name is a later-client correlation. Stone emits action `0x41` a
 
 The `CException` name is a later-client correlation. Stone emits action `0x42` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
 
-## `0x43` `CInteract`
+## `0x43` `CRequestObjectInfo`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1086,13 +1088,13 @@ The `CException` name is a later-client correlation. Stone emits action `0x42` a
 
 ### Mapping status
 
-The `CInteract` name is a later-client correlation. Stone emits action `0x43` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
+The `CRequestObjectInfo` name is a later-client correlation. Stone emits action `0x43` at the listed sites, but the payload fields and client-side trigger still require current-version tracing.
 
 ## `0x44` `CRemoveEquip`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1116,7 +1118,7 @@ The `CRemoveEquip` name is a later-client correlation. Stone emits action `0x44`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1140,7 +1142,7 @@ The `CReplyCRC` name is a later-client correlation. Stone emits action `0x45` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1164,7 +1166,7 @@ The `CGroupView` name is a later-client correlation. Stone emits action `0x46` a
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1188,7 +1190,7 @@ The `CAddStat` name is a later-client correlation. Stone emits action `0x47` at 
 
 **Direction:** client to server
 
-**Wire treatment:** Cleartext, no sequence consumed.
+**Encrypted:** No.
 
 ### Logical shape
 
@@ -1215,7 +1217,7 @@ The `CRequestPatch` name is a later-client correlation. Stone emits action `0x48
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1245,7 +1247,7 @@ The `CExchange` name is a later-client correlation. Stone emits action `0x4A` at
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1269,7 +1271,7 @@ The `CSpellDelayRequest` name is a later-client correlation. Stone emits action 
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1296,7 +1298,7 @@ The `CSpellDelaySay` name is a later-client correlation. Stone emits action `0x4
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1320,7 +1322,7 @@ The action purpose is independently established: `net_c_build_portrait_response`
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
@@ -1345,7 +1347,7 @@ The `CMulti` name is a later-client correlation. Stone emits action `0x57` at th
 
 **Direction:** client to server
 
-**Wire treatment:** XOR-transformed, sequence consumed.
+**Encrypted:** Yes.
 
 ### Logical shape
 
