@@ -94,7 +94,9 @@ Use lower snake case names and a subsystem prefix:
 - `file_` for file access and container handling
 - `fmt_` for a specific format encoder or decoder
 - `input_` for keyboard, mouse, and device input
-- `net_` for sockets, framing, messages, and transformations
+- `net_` for direction-neutral sockets, framing, messages, and transformations
+- `net_c_` for established client-to-server packet builders, serializers, and direction-specific helpers
+- `net_s_` for established server-to-client packet readers, handlers, and direction-specific helpers
 - `render_` for graphics, surfaces, palettes, and presentation
 - `ui_` for windows, controls, screens, and widgets
 - `event_` for internal dispatch and queues
@@ -102,6 +104,8 @@ Use lower snake case names and a subsystem prefix:
 - `util_` only for genuinely cross-cutting helpers
 
 Use names that describe observed behavior, such as `net_read_u16_be`, rather than unproven intent. If a tentative IDA rename is useful during active investigation, use an `_maybe` suffix and remove it before documenting the function as established.
+
+Keep an owning-subsystem prefix when direction is secondary. For example, a pane method that dispatches server packets remains `ui_...`, while a network-owned server packet parser uses `net_s_...`.
 
 For each understood function:
 

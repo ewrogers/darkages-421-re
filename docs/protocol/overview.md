@@ -31,7 +31,7 @@ The logical packet delivered to or accepted from application code is:
 [action] [payload] [zero sentinel]
 ```
 
-The sequence byte and XOR passes are omitted for client actions `0x00`, `0x48`, and `0x10`, and for server actions `0x00`, `0x40`, and `0x03`. See [Networking](../subsystems/networking.md#sequence-and-xor-transformation) for the exact transformation order and generated-table formulas.
+The sequence byte and XOR passes are omitted for client actions `0x00`, `0x48`, and `0x10`, and for server actions `0x00`, `0x40`, and `0x03`. Only transformed client packets consume and increment the client send sequence. See [Networking](../subsystems/networking.md#sequence-and-xor-transformation) for the exact transformation order and generated-table formulas.
 
 ## Directional catalogs
 
@@ -46,10 +46,13 @@ The server action `0x4B` contains a big-endian length followed by a logical clie
 
 ## Current interpretation level
 
-The indexes distinguish three evidence levels without assigning speculative game meanings:
+The indexes distinguish evidence and provenance without assigning later-version behavior to Stone automatically:
 
 - An established name is used when instructions, data flow, and diagnostics or visible state changes agree.
-- A neutral `client_action_XX` or `server_action_XX` label means support and dispatch are established but semantic purpose is not yet mapped.
+- A direction-prefixed `C...` name in the client index is a cross-version reference supplied from later-client dumps. The Stone notes state which behavior is independently established in 4.21.
+- A neutral `server_action_XX` label means support and dispatch are established but semantic purpose is not yet mapped.
 - Builder and handler addresses are included even when individual payload fields remain to be analyzed.
 
 The indexes are exhaustive for fixed action constants accepted or emitted by the traced Stone packet path. They are not claims that every payload schema is already understood.
+
+Direction-specific network-owned IDA names use `net_c_...` for client-to-server code and `net_s_...` for server-to-client code. Direction-neutral transport code retains `net_...`. Methods owned primarily by another subsystem retain that subsystem prefix, such as `ui_...` for pane packet dispatch.
