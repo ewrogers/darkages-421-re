@@ -27,12 +27,16 @@ Do not store a process-specific absolute address in controller configuration.
 | `app_shutdown` | `Darkages.exe:0x0045B8F0` | `0x0005B8F0` | Draining and detach boundary. |
 | `app_initialize` | `Darkages.exe:0x0045CCA0` | `0x0005CCA0` | Early-injection readiness boundary. |
 | `event_dispatcher_queue_event_copy` | `Darkages.exe:0x00431200` | `0x00031200` | Copy a 36-byte Event and post dispatcher work code 3. |
-| `event_dispatcher_tick` | `Darkages.exe:0x004315B0` | `0x000315B0` | Optional dispatcher-thread command pump. |
+| `event_dispatcher_tick` | `Darkages.exe:0x004315B0` | `0x000315B0` | Dispatcher-thread command pump. |
 | `event_dispatch` | `Darkages.exe:0x00431B84` | `0x00031B84` | Central Event hook. |
 | `event_dispatch_hierarchy` | `Darkages.exe:0x00431D54` | `0x00031D54` | Recursive pane delivery validator. |
 | `event_post_socket_bytes` | `Darkages.exe:0x00432E50` | `0x00032E50` | Decoded server packet hook and injection. |
 | `event_manager_queue_event_copy` | `Darkages.exe:0x00432F10` | `0x00032F10` | Optional raw Event injection through EventMan. |
-| `net_c_queue_send` | `Darkages.exe:0x004A3570` | `0x000A3570` | Logical client packet hook and injection. |
+| `event_process_work_item` | `Darkages.exe:0x00433110` | `0x00033110` | EventMan worker-side packet and input adapter. |
+| `event_manager_periodic_noop` | `Darkages.exe:0x00434080` | `0x00034080` | EventMan worker command-pump slot. |
+| `util_memory_manager_alloc` | `Darkages.exe:0x00470FC0` | `0x00070FC0` | Client-owned inbound packet allocation. |
+| `net_c_queue_send` | `Darkages.exe:0x004A3570` | `0x000A3570` | Logical client packet hook and native-queue fallback. |
+| `net_poll_receive` | `Darkages.exe:0x004A39C0` | `0x000A39C0` | Socket periodic callback and command-pump hook. |
 | `net_process_work_item` | `Darkages.exe:0x004A54D0` | `0x000A54D0` | Socket work-code validator. |
 | `net_c_send_packet_body` | `Darkages.exe:0x004A72B4` | `0x000A72B4` | Transform, frame, and send validator. |
 | `event_manager_instance` | `Darkages.exe:0x004E32C0` | `0x000E32C0` | EventMan static root. |
@@ -40,6 +44,7 @@ Do not store a process-specific absolute address in controller configuration.
 | `ui_screen_registry` | `Darkages.exe:0x004F51CC` | `0x000F51CC` | Screen tree static root. |
 | `event_dispatcher` | `Darkages.exe:0x004F51D0` | `0x000F51D0` | Dispatcher static root. |
 | `app_main_window` | `Darkages.exe:0x004F51DC` | `0x000F51DC` | Main `HWND` root. |
+| `util_memory_manager_instance` | `Darkages.exe:0x004FA160` | `0x000FA160` | Client allocator static root. |
 | `event_dispatcher_vtable` | `Darkages.exe:0x0050D180` | `0x0010D180` | Dispatcher class validator. |
 | `event_manager_vtable` | `Darkages.exe:0x0050D720` | `0x0010D720` | EventMan class validator. |
 | `event_vtable` | `Darkages.exe:0x0050D740` | `0x0010D740` | Raw Event object validator. |
@@ -57,7 +62,7 @@ A useful profile contains more than symbol addresses:
 | Functions | RVA, prototype, calling convention, minimum detour length, expected normalized instructions, and semantic validator identifier. |
 | Globals | RVA, type, lifecycle, nullable phases, expected publisher and clearer functions. |
 | Vtables | RVA, slot count used by the proxy, required slot targets, and class name confidence. |
-| Object layouts | Size where established, field offsets and widths, ownership, discriminator, and valid ranges. |
+| Object layouts | Size where established, field offsets and widths, ownership, discriminator, valid ranges, worker wait handle 0, and native ring pointer. |
 | Packet and Event layouts | Direction, type or action field, payload representation, owned pointers, and cleanup function. |
 | Capabilities | Required symbols and validators for each hook, command, snapshot family, peek path, or typed poke. |
 
@@ -87,8 +92,12 @@ A generic function prologue such as register saves and stack allocation is not a
 | `event_dispatcher_queue_event_copy` | Allocate the established Event size, shallow-copy the complete Event, and post dispatcher work code 3. |
 | `net_c_queue_send` | Accept a pointer and signed length, enforce the transfer exception for action `0x10`, allocate `length + 1`, append zero, and post Socket work code 5. |
 | `net_process_work_item` | Route code 5 to the logical body sender and free the queued packet copy afterward. |
+| `net_poll_receive` and Socket vtable | Occupy periodic slot `+0x10`, run on the Socket worker after every wake, and poll the configured receive path. |
+| `event_manager_periodic_noop` and EventMan vtable | Occupy periodic slot `+0x10` and return without native work. |
+| `util_thread_queue_worker_loop` | Treat an empty wait-handle-0 wake as valid and still call periodic slot `+0x10`. |
+| `util_ring_buffer_push_wait` | Lock the queue monitor, wait on not-full at capacity, copy one fixed-size element, signal not-empty, and unlock. |
 | `event_manager_ctor` and roots | Allocate or construct the Socket at EventMan `+0x68`, publish EventMan and Socket globals, and clear them during destruction. |
-| `app_shutdown` | Destroy EventMan and the Socket root before final dispatcher destruction, providing a safe proxy drain boundary. |
+| `app_shutdown` | Delete EventMan before final dispatcher destruction; EventMan's destructor deletes its Socket and clears both static roots. |
 
 Validation should also confirm the expected vtable at each live root. A matching function body with a mismatched owner layout is not enough to enable mutation.
 
@@ -100,7 +109,9 @@ Resolve capabilities independently, then expose only the ones whose complete dep
 |---|---|
 | Decoded ingress observation and block | `event_post_socket_bytes`, EventMan root and vtable, safe detour bytes. |
 | Central Event observation and block | `event_dispatch`, Event layout, dispatcher root and vtable, caller cleanup. |
-| Client packet observation and send | `net_c_queue_send`, Socket root and vtable, signed length and transfer-gate fields. |
+| Client packet observation | `net_c_queue_send`, Socket root and vtable, signed length and transfer-gate fields. |
+| Worker-affine client packet send | Socket root and vtable, `net_poll_receive`, `net_c_send_packet_body`, wait handle 0, signed length, and transfer-gate fields. |
+| Worker-affine server packet injection | EventMan root and vtable, periodic slot, `event_process_work_item`, memory-manager root and allocator, packet ownership, and wait handle 0. |
 | Window-faithful input | Main `HWND`, window procedure behavior, message schema. |
 | Internal input injection | EventMan root plus each requested input queue function and normalized scan-code contract. |
 | Typed UI snapshot | Root or tree walker, vtable, every requested field offset, stable-copy rules. |
@@ -198,9 +209,15 @@ Only publish a field after its owner, width, signedness, and lifecycle agree acr
 | `Darkages.exe:0x00431B84` | `event_dispatch` | `int __thiscall(void *event_dispatcher_object, void *event)` | Central logical Event routing. | Signature validator includes capture, hierarchy, and three Event category tests. |
 | `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *event_manager_object, const uint8_t *packet, int length)` | Copy decoded server bytes into EventMan work. | Signature validator includes `length + 1`, zero sentinel, and code `0x0E`. |
 | `Darkages.exe:0x00432630` | `event_manager_ctor` | `void *__thiscall(void *event_manager_object)` | Construct EventMan and its owned Socket. | Allocates the `0x780D4`-byte Socket, stores it at `+0x68`, and publishes both roots in 4.21. |
+| `Darkages.exe:0x00433110` | `event_process_work_item` | `void __thiscall(void *event_manager_object, int code, void *data, int value)` | Execute EventMan worker records. | Code `0x0E` transfers a client-allocated decoded packet into Event type 9. |
+| `Darkages.exe:0x00434080` | `event_manager_periodic_noop` | `void __thiscall(void *event_manager_object)` | Native EventMan periodic callback. | Confirms a no-op `+0x10` worker slot for a profile-gated command pump. |
 | `Darkages.exe:0x0045B8F0` | `app_shutdown` | `void __cdecl(void)` | Destroy global subsystems. | Cross-profile lifecycle and detach anchor. |
 | `Darkages.exe:0x0045CCA0` | `app_initialize` | `void __cdecl(void)` | Build the main client subsystem graph. | Cross-profile allocation and publication anchor. |
+| `Darkages.exe:0x00470FC0` | `util_memory_manager_alloc` | `void *__thiscall(void *memory_manager, int size)` | Allocate client-owned storage. | Required for EventMan worker injection whose payload reaches dispatcher cleanup. |
 | `Darkages.exe:0x004A32F0` | `net_socket_ctor` | `void *__thiscall(void *socket_object, void *event_sink)` | Construct Socket state and worker base. | Vtable, buffer-size, event-sink, and default-key anchor. |
 | `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Copy logical client egress. | Signature validator includes transfer gate, `0x10` exception, sentinel, and work code 5. |
+| `Darkages.exe:0x004A39C0` | `net_poll_receive` | `void __thiscall(void *socket_object)` | Run Socket periodic receive polling. | Socket vtable slot `+0x10`; profile-gated Socket command-pump hook. |
 | `Darkages.exe:0x004A54D0` | `net_process_work_item` | `void __thiscall(void *socket_object, int code, void *data, int value)` | Dispatch Socket worker records. | Validates queue code relationships and queued-buffer cleanup. |
-| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append a raw async record and signal the worker. | Cross-family worker-queue anchor; caller wrappers establish ownership. |
+| `Darkages.exe:0x004A72B4` | `net_c_send_packet_body` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Transform, frame, and send on the Socket worker. | Worker-affine injection adapter; validate that it does not retain or free its input. |
+| `Darkages.exe:0x00498080` | `util_ring_buffer_push_wait` | `void __thiscall(void *ring_buffer, const void *element)` | Synchronize bounded-ring admission. | Cross-family proof that native multi-producer admission is race-safe but can block. |
+| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append a raw async record and signal the worker. | Cross-family worker-queue anchor; can block for capacity and caller wrappers establish ownership. |

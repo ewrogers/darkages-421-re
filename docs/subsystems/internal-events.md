@@ -29,6 +29,14 @@ Window input uses the same EventMan worker. The main window procedure posts work
 
 Both wrappers ultimately call `util_thread_queue_post_async`, which appends the raw `{code, data, value}` record and releases the queue semaphore. The raw helper does not copy the data pointer. Ownership comes from the caller-specific wrapper, so proxy code should use a mapped wrapper instead of posting a stack pointer directly. See [Event Proxy Hooks and Injection](../event-proxy/hooks-and-injection.md) for the resulting interception and injection boundaries.
 
+### Bounded queue synchronization
+
+The worker queue is safe for simultaneous producers. Its ring owns a monitor, a not-full condition, and a not-empty condition. `util_ring_buffer_push_wait` acquires the monitor, waits when `element_count == capacity`, copies one fixed-size record, signals not-empty, and releases the monitor. `util_ring_buffer_pop_wait` performs the symmetric operation and signals not-full after removing a record.
+
+This establishes synchronization for the native client and an injected producer that calls a copied-input wrapper at the same time. It does not make admission nonblocking. `util_thread_queue_post_async` does not wait for worker completion, but its internal ring push can wait indefinitely for space. The Socket and EventMan rings each hold 128 records; the dispatcher ring holds 1,024.
+
+That distinction matters during shutdown. EventMan destruction deletes its owned Socket, clears both static roots, and then tears down its worker base. The worker-base destructor uses `TerminateThread` and destroys the ring and its synchronization objects. A foreign thread must not still be waiting in that ring when teardown begins. The Event Proxy design therefore uses bounded proxy queues and worker-affine pumps, with `app_shutdown` entry as a drain barrier.
+
 ### Worker and timer lifecycle
 
 The Windows message loop is not a frame loop. The dispatcher derives from a cross-subsystem thread-queue base whose constructor creates a thread with `_beginthreadex` and `CREATE_SUSPENDED`. The same base is also used by the Socket and other worker-derived objects. The dispatcher configures that worker before `util_thread_queue_start` resumes it:
@@ -48,7 +56,7 @@ The dispatcher calls `timeGetDevCaps` but does not check its return. It calls `t
 
 `util_thread_queue_start` first calls virtual slot `+0x08` so the derived object can add its wait object. It resumes the thread only when `app_error_code` remains zero.
 
-The worker runs `WaitForMultipleObjects(wait_count, wait_handles, FALSE, timeout_ms)` forever. Wait handle index 0 is the queued-work notification. A work wake removes one record and calls the derived work-item virtual method. Other registered handle indices call virtual slot `+0x1C`. After every handled wake, empty queue wake, secondary signal, or timeout, the loop calls virtual slot `+0x10`. In the dispatcher vtable, that periodic slot is `event_dispatcher_tick`.
+The worker runs `WaitForMultipleObjects(wait_count, wait_handles, FALSE, timeout_ms)` forever. Wait handle index 0 is the queued-work notification. A work wake first checks the ring. It removes and handles one record when nonempty, but an empty ring is also valid and skips directly to the periodic virtual. Other registered handle indices call virtual slot `+0x1C`. After every handled wake, empty queue wake, secondary signal, or timeout, the loop calls virtual slot `+0x10`. In the dispatcher vtable, that periodic slot is `event_dispatcher_tick`; the Socket slot is `net_poll_receive`; the EventMan slot is `event_manager_periodic_noop`.
 
 ### Timer records and scheduling
 
@@ -80,7 +88,7 @@ The code uses plain unsigned addition, sorting, and `current_tick < deadline` co
 
 ### Shutdown and ownership
 
-`app_shutdown` deletes the event dispatcher before it deletes the global deferred-deletion queue. The dispatcher destructor performs these operations in order:
+`app_shutdown` first deletes EventMan, whose destructor deletes its owned Socket and clears both static roots. It later deletes the event dispatcher before it deletes the global deferred-deletion queue. The dispatcher destructor performs these operations in order:
 
 1. Delete the pane registry.
 2. Delete the timer list.
@@ -121,7 +129,9 @@ for (;;) {
     );
 
     if (wait_result == WAIT_OBJECT_0) {
-        process_one_queued_record(worker);
+        if (!util_ring_buffer_is_empty(worker->work_queue)) {
+            process_one_queued_record(worker);
+        }
     } else if (wait_result > WAIT_OBJECT_0 &&
                wait_result < WAIT_OBJECT_0 + worker->wait_count) {
         process_secondary_wait_handle(worker, wait_result);
@@ -177,7 +187,11 @@ Offsets below are from the event dispatcher object. The worker-base fields are s
 | `+0x0C` | 4 | `wait_timeout_ms` | Set to 1 by `util_thread_queue_set_wait_timeout`; consumed by `util_thread_queue_worker_loop`. |
 | `+0x10` | 1 | `wait_handle_count` | Passed to `WaitForMultipleObjects`. |
 | `+0x14` | variable | `wait_handles` | Handle index 0 is the worker queue notification. |
+| `+0x54` | 4 | `work_queue` | Bounded fixed-record ring; capacity is `0x400` for the dispatcher and `0x80` for EventMan and Socket. |
+| `+0x58` | 4 | `completion_monitor` | Serializes synchronous completion bookkeeping. |
+| `+0x5C` | 4 | `completion_waiters` | Tracks synchronous callers waiting for a work result. |
 | `+0x60` | 4 | `worker_thread` | Suspended handle created by the base constructor, resumed by `util_thread_queue_start`, forcibly terminated by the base destructor. |
+| `+0x64` | 4 | `worker_thread_id` | Thread identifier returned by `_beginthreadex`. |
 | `+0x68` | 4 | `pane_registry` | Points to a packed hierarchy with stride `0x0F`; each node stores its child list at `+0x04` and pane at `+0x08`. |
 | `+0x6C` | 4 | `multimedia_period_ms` | Period passed to `timeBeginPeriod` and later `timeEndPeriod`. |
 | `+0x70` | 4 | `current_tick` | Latest `timeGetTime` sample; also the base for newly inserted relative delays. |
@@ -202,13 +216,18 @@ Offsets below are from the event dispatcher object. The worker-base fields are s
 | `Darkages.exe:0x00431B84` | `event_dispatch` | `int __thiscall(void *this, void *event)` | Dispatch one internal Event. | Called by the event manager; delegates hierarchy traversal to `event_dispatch_hierarchy`. |
 | `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | `int __thiscall(void *this, void *event, void *hierarchy)` | Walk registered panes and call the type-specific virtual handler. | Socket Event type 9 reaches pane virtual slot `+0x40`. |
 | `Darkages.exe:0x00432630` | `event_manager_ctor` | `void *__thiscall(void *event_manager_object)` | Construct and publish the EventMan singleton. | Calls `util_thread_queue_ctor` with capacity `0x80`, initializes event-manager and Socket-facing state, and stores `event_manager_instance`. |
+| `Darkages.exe:0x00432514` | `event_manager_dtor` | `void __thiscall(void *event_manager_object)` | Destroy EventMan and its owned Socket. | Clears `net_socket_instance` and `event_manager_instance`, then tears down the worker base. |
 | `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *this, const uint8_t *packet, int length)` | Copy decoded packet bytes to event-manager work code `0x0E`. | Called by the Socket receive path. |
 | `Darkages.exe:0x00432F10` | `event_manager_queue_event_copy` | `void __thiscall(void *event_manager_object, const void *event)` | Copy one `0x24`-byte Event to EventMan work code `0x0F`. | The consumer path is established, but this build has no native call sites for the wrapper. |
 | `Darkages.exe:0x00433110` | `event_process_work_item` | `void __thiscall(void *this, int code, void *data, int value)` | Convert event-manager work records into input state or Event objects. | Work codes 4 through `0x0B` handle window input; code `0x0E` creates a socket-packet Event and transfers packet ownership. |
 | `Darkages.exe:0x00433DC4` | `event_queue_socket_packet` | `void __stdcall(uint8_t *packet, uint32_t size)` | Queue Event type 9 with packet ownership. | Called by `event_process_work_item`; dispatcher work code 3 frees the packet after dispatch. |
+| `Darkages.exe:0x00434080` | `event_manager_periodic_noop` | `void __thiscall(void *event_manager_object)` | Perform the native EventMan periodic callback. | Empty implementation at vtable slot `+0x10`; still reached after every EventMan wake or timeout. |
 | `Darkages.exe:0x004BE9B0` | `util_thread_queue_ctor` | `void *__thiscall(void *worker_object, int queue_capacity)` | Construct queue state and a suspended worker thread. | Cross-subsystem base constructor used by the dispatcher, event manager, Socket, and other worker-derived objects. |
+| `Darkages.exe:0x004BEC34` | `util_thread_queue_add_wait_handle` | `void __thiscall(void *worker_object, void *wait_handle)` | Append a Win32 handle to the worker wait set. | Constructor uses it to install the work semaphore as wait handle 0; maximum count is 16. |
 | `Darkages.exe:0x004BECB0` | `util_thread_queue_dtor` | `void __thiscall(void *worker_object)` | Terminate the worker and close its handles and queue state. | Uses `TerminateThread`; called by derived destructors. |
 | `Darkages.exe:0x004BEDF0` | `util_thread_queue_set_wait_timeout` | `void __thiscall(void *worker_object, unsigned int timeout_ms)` | Set the worker wait timeout. | Dispatcher constructor passes 1 millisecond. |
 | `Darkages.exe:0x004BEE00` | `util_thread_queue_start` | `void __thiscall(void *worker_object)` | Create the derived wait object and resume the suspended thread. | Called by `app_initialize` for both event workers and by other worker-derived clients. |
-| `Darkages.exe:0x004BF250` | `util_thread_queue_worker_loop` | `void __thiscall(void *worker_object)` | Wait for work, signals, or timeout and invoke derived virtual methods. | Infinite worker body; periodic virtual slot `+0x10` reaches `event_dispatcher_tick` for the dispatcher object. |
-| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append one asynchronous worker record and wake the worker. | Copies the record fields but not the pointed-to data; caller wrappers establish lifetime. |
+| `Darkages.exe:0x004BF250` | `util_thread_queue_worker_loop` | `void __thiscall(void *worker_object)` | Wait for work, signals, or timeout and invoke derived virtual methods. | Empty work wakes still call periodic slot `+0x10`; targets are dispatcher tick, Socket poll, and EventMan no-op. |
+| `Darkages.exe:0x00498080` | `util_ring_buffer_push_wait` | `void __thiscall(void *ring_buffer, const void *element)` | Append one fixed-size ring element under the queue monitor. | Waits on not-full when the bounded ring has no capacity. |
+| `Darkages.exe:0x004981B0` | `util_ring_buffer_pop_wait` | `void __thiscall(void *ring_buffer, void *element_out)` | Remove one fixed-size ring element under the queue monitor. | Signals not-full after the copy and count update. |
+| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append one asynchronous worker record and wake the worker. | Copies the record fields but not pointed-to data; can block for ring capacity even though it does not wait for completion. |

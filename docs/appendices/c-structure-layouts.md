@@ -34,20 +34,24 @@ These constants are RVAs, not absolute runtime addresses. Add each value to the 
 #define DA_RVA_UI_BULLETIN_SESSION       0x000e2d70u
 #define DA_RVA_UI_LAG_INDICATOR_PANE     0x000e2e40u
 #define DA_RVA_UI_EQUIP_PANE             0x000e32a4u
+#define DA_RVA_EVENT_MANAGER             0x000e32c0u
 #define DA_RVA_UI_USERS_DIALOG_PANE      0x000e3564u
 #define DA_RVA_UI_LOCAL_USER             0x000f5198u
 #define DA_RVA_UI_MAIN_MENU_PANE         0x000f51acu
 #define DA_RVA_UI_MAP_PANE               0x000f51b0u
 #define DA_RVA_UI_BACKGROUND_PANE        0x000f51b4u
+#define DA_RVA_NET_SOCKET                0x000f51bcu
 #define DA_RVA_UI_SCREEN_PANE            0x000f51c8u
 #define DA_RVA_UI_SCREEN_REGISTRY        0x000f51ccu
 #define DA_RVA_EVENT_DISPATCHER          0x000f51d0u
+#define DA_RVA_MEMORY_MANAGER            0x000fa160u
 #define DA_RVA_UI_LOCAL_USER_ALIAS       0x000fc244u
 #define DA_RVA_UI_TERMINAL_PANE          0x000fd640u
 
 #define DA_RVA_VTABLE_BULLETIN_SESSION   0x00101e60u
 #define DA_RVA_VTABLE_LAG_INDICATOR      0x00109c20u
 #define DA_RVA_VTABLE_EQUIP_PANE         0x0010c6c0u
+#define DA_RVA_VTABLE_EVENT_MANAGER      0x0010d720u
 #define DA_RVA_VTABLE_GAME_BUTTONS       0x00110300u
 #define DA_RVA_VTABLE_SKILL_INVENTORY    0x00110420u
 #define DA_RVA_VTABLE_SPELL_INVENTORY    0x00110480u
@@ -55,6 +59,7 @@ These constants are RVAs, not absolute runtime addresses. Add each value to the 
 #define DA_RVA_VTABLE_SKILL_SLOT         0x00114820u
 #define DA_RVA_VTABLE_SPELL_SLOT         0x00114880u
 #define DA_RVA_VTABLE_LOCAL_USER         0x0011e980u
+#define DA_RVA_VTABLE_NET_SOCKET         0x00126940u
 ```
 
 For example, reading the lag value takes two remote reads. First read a `da_ptr32` from `module_base + DA_RVA_UI_LAG_INDICATOR_PANE`, then read a `da_lag_indicator_pane` from the resulting heap address. Validate its first dword against `module_base + DA_RVA_VTABLE_LAG_INDICATOR` before using `smoothed_move_rtt_ms`.
@@ -114,15 +119,45 @@ The hierarchy array itself is packed. Record two begins at `array + stride`, whi
 ## Event and socket layouts
 
 ```c
+typedef struct da_worker_record {
+    uint32_t code;                      /* +0x00 */
+    da_ptr32 data;                      /* +0x04 */
+    int32_t value;                      /* +0x08 */
+    da_ptr32 completion_event;          /* +0x0C */
+    da_ptr32 result_buffer;             /* +0x10 */
+    int32_t result_buffer_size;         /* +0x14 */
+} da_worker_record;                     /* 0x18 bytes */
+
+typedef struct da_worker_queue_base {
+    da_ptr32 vtable;                    /* +0x00 */
+    uint8_t unknown_04[0x08];           /* +0x04 */
+    uint32_t wait_timeout_ms;           /* +0x0C */
+    uint8_t wait_handle_count;          /* +0x10 */
+    uint8_t unknown_11[0x03];           /* +0x11 */
+    da_ptr32 wait_handles[16];          /* +0x14, index 0 is work */
+    da_ptr32 work_queue;                /* +0x54 */
+    da_ptr32 completion_monitor;        /* +0x58 */
+    da_ptr32 completion_waiters;        /* +0x5C */
+    da_ptr32 worker_thread;             /* +0x60 */
+    uint32_t worker_thread_id;          /* +0x64 */
+} da_worker_queue_base;                 /* 0x68 bytes */
+
+typedef struct da_bounded_ring {
+    da_ptr32 vtable;                    /* +0x00 */
+    uint8_t unknown_04[0x08];           /* +0x04 */
+    da_ptr32 monitor;                   /* +0x0C */
+    da_ptr32 not_full_condition;        /* +0x10 */
+    da_ptr32 not_empty_condition;       /* +0x14 */
+    int32_t element_size;               /* +0x18 */
+    int32_t capacity;                   /* +0x1C */
+    da_ptr32 buffer;                    /* +0x20 */
+    int32_t element_count;              /* +0x24 */
+    int32_t head_index;                 /* +0x28 */
+    int32_t tail_index;                 /* +0x2C */
+} da_bounded_ring;                      /* 0x30 bytes */
+
 typedef struct da_event_dispatcher_prefix {
-    da_ptr32 vtable;                    /* +0x0000 */
-    uint8_t unknown_0004[0x08];         /* +0x0004 */
-    uint32_t wait_timeout_ms;           /* +0x000C */
-    uint8_t wait_handle_count;          /* +0x0010 */
-    uint8_t unknown_0011[0x03];         /* +0x0011 */
-    da_ptr32 wait_handles[19];          /* +0x0014 */
-    da_ptr32 worker_thread;             /* +0x0060 */
-    uint8_t unknown_0064[0x04];         /* +0x0064 */
+    da_worker_queue_base worker;        /* +0x0000 */
     da_ptr32 pane_registry;             /* +0x0068 */
     uint32_t multimedia_period_ms;      /* +0x006C */
     uint32_t current_tick;              /* +0x0070 */
@@ -139,8 +174,7 @@ typedef struct da_event_timer_record {
 } da_event_timer_record;                /* 0x14 bytes */
 
 typedef struct da_event_manager_input_view {
-    da_ptr32 vtable;                    /* +0x0000 */
-    uint8_t unknown_0004[0x64];         /* +0x0004 */
+    da_worker_queue_base worker;        /* +0x0000 */
     da_ptr32 socket_object;             /* +0x0068 */
     int32_t mouse_y;                    /* +0x006C */
     int32_t mouse_x;                    /* +0x0070 */
@@ -160,8 +194,7 @@ typedef struct da_event_manager_input_view {
 } da_event_manager_input_view;          /* known prefix through 0x04B8 */
 
 typedef struct da_socket_421 {
-    da_ptr32 vtable;                    /* +0x00000 */
-    uint8_t unknown_00004[0x64];        /* +0x00004 */
+    da_worker_queue_base worker;        /* +0x00000 */
     da_ptr32 event_sink;                /* +0x00068 */
     da_ptr32 receive_cache;             /* +0x0006C */
     uint8_t unknown_00070[0x48004];     /* +0x00070 */
@@ -199,6 +232,8 @@ typedef struct da_socket_event {
     uint8_t unknown_1c[0x08];           /* +0x1C */
 } da_socket_event;                      /* 0x24 bytes */
 ```
+
+`da_worker_queue_base.wait_handles[0]` is the native work semaphore. The worker tolerates that semaphore being signaled while `work_queue` is empty and still invokes its periodic vtable slot. This is the established wake primitive for the proposed worker-affine Event Proxy pumps. Do not modify `da_bounded_ring` indices or counts from an inspector. Socket and EventMan rings have capacity `0x80`; the dispatcher ring has capacity `0x400`.
 
 ## Persistent game UI layouts
 

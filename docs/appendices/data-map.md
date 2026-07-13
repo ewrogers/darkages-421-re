@@ -26,6 +26,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x004F51E0` | `app_instance` | `HINSTANCE` | Application and Win32 | Saved process instance handle. | [Startup and Shutdown](../lifecycle/startup.md#process-entry-and-window-class) | Assigned by `app_win_main` after class registration. |
 | `Darkages.exe:0x004F51F4` | `app_shutdown_requested` | `uint8_t` | Application | Requests termination of the blocking message loop. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) | Observed only after `GetMessageA` returns. Several writers also post a message to wake the loop. |
 | `Darkages.exe:0x004FA0E0` | `app_single_instance_mutex` | `HANDLE` | Application | Handle for `Nexon.SingleInstance`. | [Startup and Shutdown](../lifecycle/startup.md#preflight-checks-and-single-instance-enforcement) | Closed and cleared only after normal `app_shutdown`. |
+| `Darkages.exe:0x004FA160` | `util_memory_manager_instance` | `void *` | Cross-subsystem memory | Static MemoryMan root used by client allocation and free wrappers. | [Hooks and Injection](../event-proxy/hooks-and-injection.md#server-packet-injection) | Required when an injected server packet will be released by dispatcher cleanup. RVA `0x000FA160`. |
 | `Darkages.exe:0x004FC244` | `ui_local_user_singleton` | `void *` | UI and character state | Class-level alias of the active local user object. | [Runtime UI Memory Map](runtime-ui-memory-map.md#lag-indicator-and-movement-timing) | Set by `ui_local_user_ctor` and cleared by `ui_local_user_dtor`. RVA `0x000FC244`. |
 | `Darkages.exe:0x004FD320` | `app_virus_check_failure_detail` | `char[256]` | Application checks | Detail inserted into the virus-scan failure prompt. | [Input and Windows Events](../subsystems/input-and-events.md#application-defined-messages) | Used when `WM_USER + 0x2046` arrives with zero `wParam`. |
 | `Darkages.exe:0x004FD420` | `app_virus_report_module` | `char[256]` | Application checks | First infected-module name reported to the window thread. | [Input and Windows Events](../subsystems/input-and-events.md#application-defined-messages) | Its address is posted in `wParam` for `WM_USER + 0x2046`. |
@@ -51,7 +52,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x00509C20` | `ui_lag_indicator_pane_vtable` | virtual table | lag indicator pane | Runtime discriminator for the persistent movement-latency indicator. | [Runtime UI Memory Map](runtime-ui-memory-map.md#lag-indicator-and-movement-timing) | Draw vslot `+0x48` selects one of four `statcon.epf` frames. RVA `0x00109C20`. |
 | `Darkages.exe:0x0050C6C0` | `ui_equip_pane_vtable` | virtual table | User Equip pane | Runtime discriminator for the persistent equipment and self-look Pane. | [Runtime UI Memory Map](runtime-ui-memory-map.md#equipment-and-self-look-fields) | RVA `0x0010C6C0`. |
 | `Darkages.exe:0x0050D180` | `event_dispatcher_vtable` | `void *[8]` | Events | Virtual table for pane dispatch, work processing, wait handling, and periodic ticks. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-object-fields) | Slot `+0x10` points to `event_dispatcher_tick`. |
-| `Darkages.exe:0x0050D720` | `event_manager_vtable` | `void *[8]` | Events and network | EventMan worker and dispatch virtual table. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) | Its work-item processing path reaches `event_process_work_item`. |
+| `Darkages.exe:0x0050D720` | `event_manager_vtable` | `void *[8]` | Events and network | EventMan worker and dispatch virtual table. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) | Slot `+0x10` points to `event_manager_periodic_noop`; slot `+0x14` reaches `event_process_work_item`. |
 | `Darkages.exe:0x0050D740` | `event_vtable` | `void *[2]` | Events | Runtime discriminator installed in copied mouse, keyboard, and socket Event objects. | [Hooks and Injection](../event-proxy/hooks-and-injection.md#generic-event-injection) | Event objects are `0x24` bytes in this build. RVA `0x0010D740`. |
 | `Darkages.exe:0x00510300` | `ui_game_buttons_pane_vtable` | virtual table | `GameButtonsPane` | Runtime discriminator for the persistent in-game content owner. | [Runtime UI Memory Map](runtime-ui-memory-map.md#gamebuttonspane-fields) | RVA `0x00110300`. |
 | `Darkages.exe:0x00510420` | `ui_skill_inventory_pane_vtable` | virtual table | skill inventory parent | Runtime discriminator for the 36-entry skill inventory. | [Runtime UI Memory Map](runtime-ui-memory-map.md#skill-inventory-and-slot-panes) | RVA `0x00110420`. |
@@ -75,7 +76,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x00524CA0` | `ui_screen_registry_vtable` | virtual table | UI | Screen composition registry table. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) | Owns packed `0x3F`-byte Screen nodes. |
 | `Darkages.exe:0x00524CE0` | `ui_screen_pane_vtable` | virtual table | UI and rendering | Persistent ScreenPane handler table. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) | Keyboard and timer slots have concrete overrides. |
 | `Darkages.exe:0x00526140` | `ui_server_select_dialog_pane_vtable` | virtual table | `ServerSelectDialogPane` | Includes the action `0x56` server-list handler. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) | Constructor and deletion diagnostics establish the class name. |
-| `Darkages.exe:0x00526940` | `net_socket_vtable` | virtual table | `Socket` | Socket work-item interface. | [Networking](../subsystems/networking.md) | Installed by `net_socket_ctor`. |
+| `Darkages.exe:0x00526940` | `net_socket_vtable` | virtual table | `Socket` | Socket work-item interface. | [Networking](../subsystems/networking.md) | Slot `+0x10` points to `net_poll_receive`; slot `+0x14` reaches `net_process_work_item`. |
 | `Darkages.exe:0x00528280` | `ui_spell_book_dialog_vtable` | virtual table | `SpellBookDialog` | Runtime class discriminator for the spell-book dialog. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Draw virtual is at `+0x48`. |
 | `Darkages.exe:0x005282E0` | `ui_skill_book_dialog_vtable` | virtual table | `SkillBookDialog` | Runtime class discriminator for the skill-book dialog. | [Pane Virtual Table Inventory](ui-pane-vtables.md#confirmed-friendly-class-names) | Draw virtual is at `+0x48`. |
 | `Darkages.exe:0x00529000` | `ui_terminal_pane_vtable` | virtual table | `TerminalPane` | Includes mouse, keyboard, and terminal server-packet handlers. | [UI Panes and Registries](../subsystems/ui-panes.md#named-persistent-panes-and-handlers) | Installed by `ui_terminal_pane_ctor`. |
@@ -100,6 +101,92 @@ These offsets are relative to the GameButtons owner found through the Screen or 
 | `+0x013C` | 4 | `skill_inventory_pane` | Selected by S/s or content index 1. |
 | `+0x0140` | 4 | `spell_inventory_pane` | Selected by D/d or content index 2. |
 | `+0x0144` | 4 | `system_message` | Constructor-owned link used by the GameButtons graph. |
+
+## Worker queue and bounded ring layouts
+
+The dispatcher, EventMan, and Socket begin with the same `0x68`-byte worker base. These fields establish the in-process wake point and the native queue state relevant to an Event Proxy.
+
+| Offset | Width | Working field | Reads and writes |
+|---:|---:|---|---|
+| `+0x00` | 4 | `vtable` | Derived worker vtable. Periodic virtual slot is `+0x10`. |
+| `+0x0C` | 4 | `wait_timeout_ms` | `INFINITE` by default; dispatcher changes it to 1. |
+| `+0x10` | 1 | `wait_handle_count` | Number of entries beginning at `+0x14`. |
+| `+0x14` | 64 | `wait_handles[16]` | Entry 0 is the work semaphore released after a native queue push. |
+| `+0x54` | 4 | `work_queue` | Pointer to the synchronized bounded ring. |
+| `+0x58` | 4 | `completion_monitor` | Protects synchronous waiter records. |
+| `+0x5C` | 4 | `completion_waiters` | List used only by synchronous work requests. |
+| `+0x60` | 4 | `worker_thread` | Thread handle created suspended and later resumed. |
+| `+0x64` | 4 | `worker_thread_id` | Thread identifier written by `_beginthreadex`. |
+
+Each native work record is `0x18` bytes. Asynchronous posting sets the final three fields to zero.
+
+| Offset | Width | Working field |
+|---:|---:|---|
+| `+0x00` | 4 | `code` |
+| `+0x04` | 4 | `data` |
+| `+0x08` | 4 | `value` |
+| `+0x0C` | 4 | `completion_event` |
+| `+0x10` | 4 | `result_buffer` |
+| `+0x14` | 4 | `result_buffer_size` |
+
+The ring object pointed to by worker `+0x54` has this established state:
+
+| Offset | Width | Working field |
+|---:|---:|---|
+| `+0x0C` | 4 | `monitor` |
+| `+0x10` | 4 | `not_full_condition` |
+| `+0x14` | 4 | `not_empty_condition` |
+| `+0x18` | 4 | `element_size` |
+| `+0x1C` | 4 | `capacity` |
+| `+0x20` | 4 | `buffer` |
+| `+0x24` | 4 | `element_count` |
+| `+0x28` | 4 | `head_index` |
+| `+0x2C` | 4 | `tail_index` |
+
+Programmer-oriented layouts follow. They are documentation types, not recovered source declarations.
+
+```c
+typedef uint32_t client_ptr32;
+
+typedef struct worker_record_421 {
+    uint32_t code;
+    client_ptr32 data;
+    int32_t value;
+    client_ptr32 completion_event;
+    client_ptr32 result_buffer;
+    int32_t result_buffer_size;
+} worker_record_421;
+
+typedef struct worker_queue_base_421 {
+    client_ptr32 vtable;
+    uint8_t unknown_04[8];
+    uint32_t wait_timeout_ms;
+    uint8_t wait_handle_count;
+    uint8_t unknown_11[3];
+    client_ptr32 wait_handles[16];
+    client_ptr32 work_queue;
+    client_ptr32 completion_monitor;
+    client_ptr32 completion_waiters;
+    client_ptr32 worker_thread;
+    uint32_t worker_thread_id;
+} worker_queue_base_421;
+
+typedef struct bounded_ring_421 {
+    client_ptr32 vtable;
+    uint8_t unknown_04[8];
+    client_ptr32 monitor;
+    client_ptr32 not_full_condition;
+    client_ptr32 not_empty_condition;
+    int32_t element_size;
+    int32_t capacity;
+    client_ptr32 buffer;
+    int32_t element_count;
+    int32_t head_index;
+    int32_t tail_index;
+} bounded_ring_421;
+```
+
+The Socket and EventMan constructors pass capacity `0x80`; the dispatcher passes `0x400`. An observer can sample `element_count`, but the value may change concurrently and external code should not write queue metadata. For a worker-affine proxy wake, validate the root and vtable, read `wait_handles[0]`, and call `ReleaseSemaphore` without touching the native ring.
 
 ## Event dispatcher fields
 

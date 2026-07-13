@@ -26,6 +26,29 @@ The accept loop belongs to the DLL and survives client-controller failure:
 
 Persistent rules are separate from session rules. They survive pipe disconnect and must be installed with an explicit persistence flag. With no rules, no controller, or an IPC failure, the proxy passes client traffic unchanged.
 
+### Command execution and worker wakes
+
+The pipe service and client command execution are separate concerns. The IPC thread parses and validates a command, copies it into a bounded proxy-owned queue, records the current connection generation, and signals the owning client worker. It never invokes a live client object directly.
+
+| Proxy queue | Consumer | Wake mechanism | Typical commands |
+|---|---|---|---|
+| Socket | Socket worker periodic pump | `ReleaseSemaphore(Socket->wait_handles[0], 1, NULL)` | `SEND_CLIENT_PACKET` and Socket-owned queries. |
+| EventMan | EventMan worker periodic pump | `ReleaseSemaphore(EventMan->wait_handles[0], 1, NULL)` | `INJECT_SERVER_PACKET` and normalized `INJECT_INPUT`. |
+| Dispatcher | Dispatcher worker periodic pump | `ReleaseSemaphore(Dispatcher->wait_handles[0], 1, NULL)` | Snapshot barriers, pane actions, timers, and typed UI writes. |
+
+The generic worker explicitly tolerates a work-semaphore wake while its native ring is empty and still calls virtual slot `+0x10`. This lets the DLL wake the correct worker without adding an unknown native work code. The Socket slot already calls `net_poll_receive`, the EventMan slot is a no-op, and the dispatcher slot calls `event_dispatcher_tick`.
+
+Admission holds a proxy lifecycle read guard across the final state check, root and vtable validation, queue copy, and `ReleaseSemaphore`. A failed wake marks the command canceled and reports `wake_failed`; it must not be reported as admitted. At `app_shutdown` entry, the DLL changes to `draining`, rejects new guards, and waits for existing admission guards before the client closes worker handles.
+
+All three proxy queues must be bounded. Admission fails immediately with `proxy_queue_full`; it must not wait for capacity while holding an IPC session lock. A successful command has two distinct milestones:
+
+- `admitted` means the command was copied into the proxy queue and the worker was signaled.
+- `executed` means the target pump validated the generation and live root and invoked the client-side action.
+
+Neither status means that TCP delivered a client packet or that a pane accepted an injected server packet. Completion records should carry the original request identifier and may arrive asynchronously after the admission response.
+
+The 4.21 native rings are also synchronized for multiple producers, so a dedicated fallback executor may call the copied-input wrappers safely. Their full-queue wait is infinite, however. This fallback must use one executor, never the pipe thread, and must stop before EventMan and Socket teardown. The worker-affine design avoids a foreign producer being asleep inside a native queue when `app_shutdown` destroys it.
+
 ### IPC framing
 
 A small fixed header lets either side skip unknown message types and correlate requests with replies. All proposed IPC integers are little-endian because this is a local Win32 protocol, not the game's network byte order.
@@ -52,8 +75,8 @@ The DLL must reject an unsupported version, a header smaller than the required f
 | `SUBSCRIBE` | Controller to DLL | Select phases, directions, actions, Event types, origins, and payload inclusion. |
 | `EVENT_RECORD` | DLL to controller | Report decoded ingress, central Event dispatch, logical egress, rule decisions, or loss markers. |
 | `RULESET_REPLACE` | Controller to DLL | Compile and atomically replace session or persistent rules. |
-| `SEND_CLIENT_PACKET` | Controller to DLL | Queue `[client action][payload]` through `net_c_queue_send`. |
-| `INJECT_SERVER_PACKET` | Controller to DLL | Post `[server action][payload]` through `event_post_socket_bytes`. |
+| `SEND_CLIENT_PACKET` | Controller to DLL | Admit `[client action][payload]` to the Socket proxy queue for worker-affine sending. |
+| `INJECT_SERVER_PACKET` | Controller to DLL | Admit `[server action][payload]` to the EventMan proxy queue for worker-affine Event creation. |
 | `INJECT_INPUT` | Controller to DLL | Post Win32-faithful input or use an established EventMan input queue. |
 | `SNAPSHOT_REQUEST` / `SNAPSHOT_RESPONSE` | Both | Return typed current state with a dispatch sequence boundary. |
 | `PEEK_REQUEST` / `PEEK_RESPONSE` | Both | Read a bounded validated memory region or pointer path. |
@@ -61,7 +84,7 @@ The DLL must reject an unsupported version, a header smaller than the required f
 | `PING` / `PONG` | Both | Detect a dead peer without coupling hook execution to liveness. |
 | `GAP` | DLL to controller | Report telemetry loss or a replay request older than the retained ring. |
 
-A packet command response reports local acceptance only. The Socket queue and Winsock send paths return no result to `net_c_queue_send`, so the IPC protocol must not describe `submitted` as network delivery.
+A packet command response reports local admission or execution only. The Socket and Winsock send paths do not provide delivery confirmation, so the IPC protocol must not describe either status as network delivery.
 
 ### Nonblocking telemetry
 
@@ -138,6 +161,7 @@ All addresses below are for the analyzed image base `0x00400000`. A profile and 
 | `Darkages.exe:0x004F51CC` | `0x000F51CC` | `ui_screen_registry` | Packed Screen composition tree. |
 | `Darkages.exe:0x004F51D0` | `0x000F51D0` | `event_dispatcher` | Packed Event pane tree, capture pane, current timer state, and dispatcher worker. |
 | `Darkages.exe:0x004F51DC` | `0x000F51DC` | `app_main_window` | Main `HWND` used for window-faithful input. |
+| `Darkages.exe:0x004FA160` | `0x000FA160` | `util_memory_manager_instance` | Client allocator root required when a worker-injected server packet transfers to dispatcher-owned cleanup. |
 | `Darkages.exe:0x004FD640` | `0x000FD640` | `ui_terminal_pane` | Active terminal pane. |
 
 The complete Screen and Event tree algorithms and current class fields are in [Runtime UI Memory Map](../appendices/runtime-ui-memory-map.md).
@@ -211,7 +235,8 @@ The IPC thread performs ruleset parsing and compilation. It does not hold the ac
 ```text
 controller snapshot request
   -> proxy queues dispatcher barrier command
-  -> dispatcher tick drains bounded command
+  -> signal dispatcher wait handle 0
+  -> dispatcher tick pump drains bounded command
       -> record last applied Event sequence
       -> read roots and expected vtables
       -> copy packed registry metadata and nodes
@@ -245,11 +270,13 @@ No hook waits for this cleanup. A command executor checks the generation again i
 |---:|---|---|---|---|
 | `Darkages.exe:0x004315B0` | `event_dispatcher_tick` | `void __thiscall(void *event_dispatcher_object)` | Periodic dispatcher-worker entry. | Proposed bounded snapshot barrier and pane-command pump location. |
 | `Darkages.exe:0x00431B84` | `event_dispatch` | `int __thiscall(void *event_dispatcher_object, void *event)` | Deliver one logical Event. | Proxy can establish an applied Event sequence around the original call. |
-| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *event_manager_object, const uint8_t *packet, int length)` | Copy decoded ingress into EventMan. | `INJECT_SERVER_PACKET` adapter. |
+| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *event_manager_object, const uint8_t *packet, int length)` | Copy decoded ingress into EventMan. | Native ingress hook and synchronized, blocking fallback for `INJECT_SERVER_PACKET`. |
+| `Darkages.exe:0x00434080` | `event_manager_periodic_noop` | `void __thiscall(void *event_manager_object)` | EventMan periodic worker callback. | Native no-op vtable slot used by the proposed EventMan command pump. |
 | `Darkages.exe:0x0043CF20` | `ui_game_buttons_handle_key_event` | `int __thiscall(void *game_buttons_pane, void *event)` | Select one persistent game content pane from keyboard input. | Evidence that input injection should prefer normal Event routing over pointer writes. |
 | `Darkages.exe:0x0043D164` | `ui_game_buttons_select_content` | `void __thiscall(void *game_buttons_pane, int8_t index)` | Hide the old persistent content pane and show the selected one. | Candidate typed action only when the pane and thread context are validated. |
 | `Darkages.exe:0x004594A0` | `ui_hierarchy_get_node` | `void *__thiscall(void *hierarchy, int index)` | Compute a packed node address from list stride and index. | Confirms unaligned Screen and Event node traversal. |
 | `Darkages.exe:0x00492C40` | `ui_pane_show` | `void __thiscall(void *pane)` | Show and invalidate a Pane. | Prefer this mapped method over writing only the common visibility byte. |
 | `Darkages.exe:0x00492D50` | `ui_pane_hide` | `void __thiscall(void *pane)` | Hide and invalidate a Pane. | Must still be coordinated with owning-pane selection state. |
-| `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Copy and queue logical client egress. | `SEND_CLIENT_PACKET` adapter; returns no send result. |
-| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append one asynchronous worker record. | Confirms the nonblocking client queue pattern, but raw use does not establish data ownership. |
+| `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Copy and queue logical client egress. | Native egress hook and synchronized, blocking fallback for `SEND_CLIENT_PACKET`; returns no send result. |
+| `Darkages.exe:0x004A39C0` | `net_poll_receive` | `void __thiscall(void *socket_object)` | Socket periodic worker callback. | Recommended Socket command-pump detour; call the original before a bounded proxy drain. |
+| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append one asynchronous worker record. | Native ring access is synchronized but can block for capacity; raw use does not establish data ownership. |

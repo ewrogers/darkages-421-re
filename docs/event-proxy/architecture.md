@@ -13,8 +13,8 @@ The injected module should satisfy these requirements:
 | Requirement | Design response |
 |---|---|
 | Observe all logical traffic | Hook decoded server packet posting, central internal Event dispatch, and logical client packet queueing. |
-| Inject client-recognized events | Use the client's input queue functions, decoded packet posting function, and Event copy queue instead of calling pane handlers from the IPC thread. |
-| Send any logical client packet | Pass an action and payload to `net_c_queue_send`; the Socket worker adds the sentinel, sequence, XOR transformation, frame, and transport send. |
+| Inject client-recognized events | Admit commands into bounded proxy queues and execute the established packet, input, or pane action from its owning client worker. |
+| Send any logical client packet | Queue an action and payload for the Socket worker pump; it appends the sentinel and enters `net_c_send_packet_body`, which adds sequence, XOR transformation, frame, and transport send. |
 | Block without an IPC round trip | Evaluate an immutable local ruleset in the hook and make the pass or block decision before telemetry is sent. |
 | Continue when no controller exists | The initial and fallback policy is pass-through. Hook execution never waits for the pipe. |
 | Survive controller exit and reconnect | The DLL owns a persistent named-pipe accept loop. A controller connection is a replaceable session, not the lifetime of the injected module. |
@@ -29,11 +29,13 @@ flowchart LR
     Controller["External controller"] <-->|"duplex named pipe"| IPC["IPC service thread"]
 
     subgraph Proxy["Injected Event Proxy DLL"]
-        IPC --> Commands["Validated command queues"]
+        IPC --> Commands["Bounded proxy command queues"]
         Hooks["Hook adapters"] --> Rules["Local immutable rules"]
         Hooks --> Telemetry["Bounded telemetry ring"]
         Telemetry --> IPC
-        Commands --> Adapters["Client-call adapters"]
+        Commands --> SocketPump["Socket worker pump"]
+        Commands --> EventPump["EventMan worker pump"]
+        Commands --> DispatchPump["Dispatcher worker pump"]
         Snapshot["Typed state snapshotter"] --> IPC
     end
 
@@ -48,12 +50,33 @@ flowchart LR
     Hooks -. "observe or block" .-> Inbound
     Hooks -. "observe or block" .-> Dispatch
     Hooks -. "observe or block" .-> Outbound
-    Adapters -. "inject" .-> EventMan
-    Adapters -. "send" .-> Outbound
+    SocketPump -. "worker-affine send" .-> SocketWorker
+    EventPump -. "worker-affine inject" .-> EventMan
+    DispatchPump -. "UI and snapshot commands" .-> Dispatch
     Snapshot -. "read validated roots" .-> Panes
 ```
 
-The hooks remain synchronous only for the local decision. Telemetry is copied into a bounded ring and delivered later by the IPC thread. Commands travel in the other direction through proxy-owned queues or through client functions that already copy and enqueue their input.
+The hooks remain synchronous only for the local decision. Telemetry is copied into a bounded ring and delivered later by the IPC thread. Commands travel in the other direction through bounded proxy-owned queues. The target client worker drains each queue so IPC code does not call a live client object from an unrelated thread.
+
+### Threading model and pump placement
+
+The named-pipe pump should run on a proxy-owned thread, but that thread should stop at framing, validation, ruleset compilation, command admission, and response serialization. It should not call `net_c_queue_send`, `event_post_socket_bytes`, pane methods, or timer methods.
+
+The strongest 4.21 design has one bounded command queue for each client ownership domain:
+
+| Queue | Execution context | Wake and pump point | Allowed work |
+|---|---|---|---|
+| Socket commands | Socket worker | Signal wait handle 0 at Socket `+0x14`; drain from the `net_socket_vtable +0x10` callback around `net_poll_receive` | Logical client packet sends and Socket-owned queries. |
+| EventMan commands | EventMan worker | Signal wait handle 0 at EventMan `+0x14`; replace or wrap `event_manager_vtable +0x10`, whose native target is `event_manager_periodic_noop` | Decoded server packet and normalized input injection. |
+| Dispatcher commands | Dispatcher worker | Signal wait handle 0 at dispatcher `+0x14`; drain from a bounded `event_dispatcher_tick` hook | Pane methods, timer operations, snapshot barriers, and validated UI writes. |
+
+This wake mechanism is supported by the generic worker loop. A wait-handle-0 wake first checks whether the native ring is empty. If it is empty, the loop skips the native pop and still invokes virtual slot `+0x10`. A proxy can therefore enqueue into its own ring, release the existing work semaphore once, and let the correct client worker enter the class-specific pump without adding a fake native work record.
+
+Command admission and the matching `ReleaseSemaphore` call must run inside a proxy lifecycle read guard. Admission rechecks the `active` state after acquiring the guard, validates the live root, vtable, and wait handle, copies the command, and checks the wake result before leaving. The shutdown hook changes the state to `draining` and waits for these guards before the original client can close any worker handle. This closes the race where an IPC thread captures Socket or EventMan `+0x14` immediately before destruction.
+
+Each pump should call the original periodic method and then process a small fixed number of commands. The Socket and EventMan pumps can normally process one packet per wake. The dispatcher pump needs both an item limit and a short elapsed-time budget because its thread runs at `THREAD_PRIORITY_TIME_CRITICAL` and also owns deferred deletion and timers. None of the pumps should wait for pipe I/O or a controller response.
+
+The client native queues are synchronized, so a simpler first implementation can use a separate proxy command-executor thread that calls `net_c_queue_send` and `event_post_socket_bytes`. This does not race the native ring indices. It is not the preferred final design because both wrappers can wait indefinitely when their 128-record queues are full, and a blocked foreign producer complicates Socket and EventMan destruction. Never make those calls on the named-pipe accept or read thread.
 
 ### Hook layers
 
@@ -61,7 +84,7 @@ Three primary hooks cover different semantics:
 
 1. `event_post_socket_bytes` sees one decoded server packet before Event creation. It is the cleanest inbound packet filter because skipping the original call prevents allocation and pane delivery.
 2. `event_dispatch` sees one logical Event before hierarchy fan-out. It covers input and packets at a common point and preserves the dispatcher's normal cleanup when a hook reports the Event consumed.
-3. `net_c_queue_send` sees one logical client packet before the sequence byte, XOR transformation, frame header, and Winsock call. It is both the outbound observation point and the normal send-injection API.
+3. `net_c_queue_send` sees one native logical client packet before the sequence byte, XOR transformation, frame header, and Winsock call. It is the outbound observation point and a synchronized fallback injection adapter. The preferred controller injection path runs on the Socket worker and enters `net_c_send_packet_body` directly.
 
 Hooking `event_dispatch_hierarchy` alone is not a replacement for the central Event hook. It is recursive, visits children before parents, translates mouse coordinates during traversal, and may be called more than once for one Event. It is useful for pane-specific diagnostics, but it produces duplicate observations and is a poor global blocking boundary.
 
@@ -107,7 +130,7 @@ Session rules should be removed automatically when their controller disconnects.
 3. Decode and validate the expected instructions, call relationships, globals, and vtables before changing code.
 4. Start the pipe accept loop and publish passive build and capability information.
 5. Wait for `event_dispatcher`, `event_manager_instance`, and `net_socket_instance` to be live.
-6. Install the inbound, Event, and outbound hooks. Install the optional dispatcher-tick command pump only if pane-thread commands are enabled.
+6. Install the inbound, Event, and outbound hooks. Install the Socket and EventMan worker pumps for packet mutation capabilities, and the dispatcher pump for pane, timer, write, or snapshot capabilities.
 7. Atomically change the capability state to active.
 
 Hook installation should use one transaction where the hooking library supports it. If any required hook fails, roll back the complete set and remain passive. A partial set can create misleading ordering, such as allowing injected packets without observing the resulting outbound queue.
@@ -126,34 +149,45 @@ decoded server packet
                           -> block: report consumed; dispatcher still frees payload
                           -> pass: event_dispatch hierarchy fan-out
 
-client builder or proxy command
+native client builder
   -> outbound local rules
       -> block: return without queue allocation
       -> pass or copy-on-write modify
           -> net_c_queue_send
               -> Socket work code 5
                   -> sequence, XOR, frame, send
+
+proxy client command
+  -> bounded Socket command queue and worker wake
+      -> Socket periodic pump
+          -> outbound local rules and telemetry
+              -> net_c_send_packet_body
+                  -> sequence, XOR, frame, send
 ```
 
 The inbound and Event hooks can both observe a server packet. Telemetry therefore includes a phase field. A default subscription should publish decoded ingress at the first hook and suppress the duplicate type 9 record at the central Event hook unless the controller explicitly requests both phases.
 
-### Optional dispatcher-thread command pump
+### Worker-affine packet pumps
 
-Most commands do not need a custom scheduler. `event_post_socket_bytes`, the native input queue functions, and `net_c_queue_send` copy their inputs into existing client queues. Direct pane operations and timer-list operations are different because they touch state owned by the dispatcher worker.
+For a client packet, the Socket pump validates the live root and vtable, checks the same transfer gate used by `net_c_queue_send`, applies outbound rules, appends the zero sentinel in proxy-owned storage, and calls `net_c_send_packet_body` with `logical_length + 1`. Static analysis shows that this function reads the input synchronously, applies the normal sequence, XOR, framing, and `send` path, and neither retains nor frees the input pointer. The proxy pump must emit the `controller` or `local_rule` telemetry itself because this route intentionally does not re-enter the `net_c_queue_send` hook.
 
-An optional hook on `event_dispatcher_tick` can drain a small, fixed number of proxy commands on that worker before calling the original tick. The drain must have a time or item budget so telemetry, deferred deletion, and timers cannot be starved. Commands should carry a generation and cancellation token so a disconnected controller cannot leave stale pane operations queued.
+For a server packet, the EventMan pump allocates `logical_length + 1` through `util_memory_manager_alloc`, copies the logical bytes, appends zero, and calls `event_process_work_item(event_manager, 0x0E, owned_packet, logical_length)` on the EventMan worker. Code `0x0E` transfers the packet into Event type 9 and the dispatcher later releases it through `util_memory_manager_free`. A DLL-heap pointer must not be passed into this ownership path.
 
-Direct calls to `event_dispatcher_insert_timer` from the IPC thread are not safe. The function edits the timer list without a visible lock and is normally reached on the dispatcher worker. A timer injection command must run through the dispatcher-thread pump and should target only an established receiver and callback identifier.
+Input injection belongs on the same EventMan pump. It can invoke the established worker-side work-code behavior with the same normalized scan code, message time, coordinates, or wheel delta that the native wrappers would have queued. This avoids self-enqueueing into EventMan's bounded ring from its own consumer thread.
+
+Direct pane operations and timer-list operations remain dispatcher-only. `event_dispatcher_insert_timer` edits the timer list without a visible lock. A timer injection command must run through the dispatcher pump and should target only an established receiver and callback identifier. All commands carry a connection generation and cancellation token so a disconnected controller cannot leave stale work queued.
+
+The Socket worker processes at most one native record and then calls its periodic method. A proxy send performed there is therefore serialized with sequence and transport state, but it is not in a single chronological FIFO with the remaining native Socket queue. If strict native-versus-controller admission order is required, use `net_c_queue_send` from one dedicated executor and accept its blocking full-queue behavior, or implement a separately validated unified admission hook.
 
 ### Shutdown path
 
-1. Enter `draining` at `app_shutdown` entry or when the required roots begin teardown.
-2. Reject packet sends, Event injection, timer work, and memory writes.
-3. Swap in the pass-through ruleset and stop rule-generated actions.
-4. Disconnect the current controller and stop the accept loop.
-5. Wait for the hook active-call counter to reach zero.
-6. Remove the optional tick hook, outbound hook, Event hook, and inbound hook.
-7. Clear cached roots, close proxy-owned handles, and mark the module detached.
+1. Enter `draining` at `app_shutdown` entry, before the original function deletes EventMan and its owned Socket.
+2. Reject new mutations, stop worker wake signals, cancel queued commands, and atomically select pass-through rules.
+3. Disconnect the current controller and stop the accept loop. Use overlapped pipe I/O or explicit cancellation so this step cannot wait indefinitely on a blocked pipe read or connect.
+4. Wait for IPC admission and wake guards, the Socket, EventMan, and dispatcher pumps, and ordinary hook active-call counters to reach zero while all three client workers are still alive.
+5. Restore worker vtable slots and remove the dispatcher, outbound, Event, and inbound hooks in reverse order.
+6. Clear cached roots and call the original `app_shutdown`. The EventMan destructor then deletes the Socket, clears both roots, and tears down their workers.
+7. Close proxy-owned handles and mark the module detached.
 
 The proxy should normally remain loaded until process exit. Calling `FreeLibrary` while another client worker might still execute a trampoline or callback into the module is more dangerous than retaining a small inert DLL.
 
@@ -164,9 +198,12 @@ The proxy should normally remain loaded until process exit. Calling `FreeLibrary
 | `Darkages.exe:0x004315B0` | `event_dispatcher_tick` | `void __thiscall(void *event_dispatcher_object)` | Run deferred deletion and one due timer. | Optional bounded proxy command-pump location because it runs on the dispatcher worker. |
 | `Darkages.exe:0x00431B84` | `event_dispatch` | `int __thiscall(void *event_dispatcher_object, void *event)` | Dispatch one logical Event. | Primary central Event observation and block boundary before hierarchy fan-out. |
 | `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | `int __thiscall(void *event_dispatcher_object, void *event, void *hierarchy)` | Recursively deliver an Event to panes. | Useful for targeted diagnostics, not for one-record-per-Event telemetry. |
-| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *event_manager_object, const uint8_t *packet, int length)` | Copy a decoded server packet and post work code `0x0E`. | Primary decoded inbound packet hook and injection adapter. |
+| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | `void __thiscall(void *event_manager_object, const uint8_t *packet, int length)` | Copy a decoded server packet and post work code `0x0E`. | Primary decoded inbound packet hook and synchronized fallback injection adapter. |
 | `Darkages.exe:0x00432F10` | `event_manager_queue_event_copy` | `void __thiscall(void *event_manager_object, const void *event)` | Copy a 36-byte Event and post EventMan work code `0x0F`. | No native call sites are present in this build; usable only with a validated Event layout. |
-| `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Copy and queue one logical client packet. | Primary outbound hook and normal client-packet injection adapter. |
+| `Darkages.exe:0x00434080` | `event_manager_periodic_noop` | `void __thiscall(void *event_manager_object)` | Native no-op EventMan periodic callback. | `event_manager_vtable +0x10`; practical vtable-slot pump for EventMan-affine commands. |
 | `Darkages.exe:0x0045B8F0` | `app_shutdown` | `void __cdecl(void)` | Tear down application subsystems. | Proxy draining and hook-removal boundary. |
 | `Darkages.exe:0x0045CCA0` | `app_initialize` | `void __cdecl(void)` | Construct the dispatcher, EventMan, Socket, screen, and other subsystems. | Early-injection readiness boundary. |
-| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append an asynchronous worker record and release the queue semaphore. | Does not copy `data`; ownership is defined by each caller-specific wrapper. |
+| `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Copy and queue one logical client packet. | Primary native outbound hook and synchronized native-queue fallback adapter; admission can block. |
+| `Darkages.exe:0x004A39C0` | `net_poll_receive` | `void __thiscall(void *socket_object)` | Poll receive state from the Socket periodic worker callback. | `net_socket_vtable +0x10`; recommended bounded Socket command-pump hook. |
+| `Darkages.exe:0x004A72B4` | `net_c_send_packet_body` | `void __thiscall(void *socket_object, const uint8_t *packet, int16_t length)` | Apply client transform and framing, then call `send`. | Socket-worker-affine packet adapter; input is read synchronously and is not retained or freed. |
+| `Darkages.exe:0x004BF440` | `util_thread_queue_post_async` | `void __thiscall(void *worker_object, int code, void *data, int value)` | Append an asynchronous worker record and release the queue semaphore. | Does not copy `data` or wait for completion, but can block while the bounded ring is full. |

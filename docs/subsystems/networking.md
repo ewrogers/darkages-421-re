@@ -61,6 +61,14 @@ The send path treats `SOCKET_ERROR` as failure. It does not retry when `send` su
 
 During a server transfer state, `net_c_queue_send` drops every client action except `0x10`, the client transfer-server action.
 
+### Queue concurrency and Socket affinity
+
+The Socket work queue has capacity `0x80`. Its ring is protected by a monitor and paired not-full and not-empty conditions. `net_c_queue_send` can therefore run concurrently on a native client thread and an injected producer without racing the head, tail, count, or copied packet ownership.
+
+The enqueue is not nonblocking. `util_thread_queue_post_async` calls `util_ring_buffer_push_wait`, which waits indefinitely when the ring is full, then signals the worker semaphore after admission. Calling it from an IPC read thread would make pipe liveness depend on Socket progress. Calling it from the Socket consumer itself can deadlock if other producers refill the ring before the self-enqueue.
+
+Sequence, XOR state, framing buffers, and the transport call are mutated only by the Socket worker after it consumes code 5. A production Event Proxy should preserve that affinity. The documented design wakes the Socket worker with an empty native-queue signal and drains a bounded proxy queue from the worker's `net_poll_receive` periodic callback. A simpler dedicated producer thread may call `net_c_queue_send`, but it must be drained before EventMan destroys its owned Socket during `app_shutdown`.
+
 The active Socket is reachable through `net_socket_instance` at `Darkages.exe:0x004F51BC`. EventMan owns the Socket at object offset `+0x68`, publishes the static root during construction, and clears it during destruction. This is the established runtime root for logical packet injection, but callers must still validate the live `net_socket_vtable` before using a cached pointer. See [Event Proxy Hooks and Injection](../event-proxy/hooks-and-injection.md) for the injection contract and ownership boundaries.
 
 ### Packet representation and C++ class evidence
@@ -185,6 +193,7 @@ The complete accepted set and all other pane handlers are in the [server action 
 | `Darkages.exe:0x00433DC4` | `event_queue_socket_packet` | `void __stdcall(uint8_t *packet, uint32_t size)` | Create and queue a socket Event. | Sets Event type 9, pointer `+0x14`, and size `+0x18`. |
 | `Darkages.exe:0x0045BDC0` | `win_main_window_proc` | `LRESULT __stdcall(HWND, UINT, WPARAM, LPARAM)` | Main window procedure and Winsock notification bridge. | Message `0x0402` handles `FD_READ` and `FD_CLOSE`. |
 | `Darkages.exe:0x004A32F0` | `net_socket_ctor` | `void *__thiscall(void *this, void *event_sink)` | Construct and initialize the Socket object. | Installs default key and transport buffers. |
+| `Darkages.exe:0x004A3294` | `net_socket_dtor` | `void __thiscall(void *socket_object)` | Close transport handles and tear down the Socket worker. | Called by the deleting destructor owned by EventMan; worker teardown uses `TerminateThread`. |
 | `Darkages.exe:0x004A3560` | `net_queue_receive` | `void __thiscall(void *this)` | Queue receive processing. | Posts Socket work code 4. |
 | `Darkages.exe:0x004A3570` | `net_c_queue_send` | `void __thiscall(void *this, const uint8_t *packet, int16_t length)` | Copy and queue a logical client packet. | Adds the zero sentinel and posts work code 5. |
 | `Darkages.exe:0x004A36C0` | `net_queue_xor_key` | `void __thiscall(void *this, unsigned int key_length, const uint8_t *key)` | Queue a replacement XOR key. | Copies the key and posts Socket work code 10; only called by the clear action `0x00` handler. |
@@ -204,6 +213,7 @@ The complete accepted set and all other pane handlers are in the [server action 
 | `Darkages.exe:0x004A7940` | `net_write_u8` | `void __cdecl(uint32_t value, uint8_t *dest)` | Write one byte. | Writes a zero byte at `dest[1]`. |
 | `Darkages.exe:0x004A7990` | `net_write_u16_be` | `void __cdecl(uint32_t value, uint8_t *dest)` | Write a big-endian 16-bit field. | Used for the frame length and packet fields. |
 | `Darkages.exe:0x004A79E4` | `net_c_encode_packet_body` | `int __stdcall(const uint8_t *src, int src_size, uint8_t *dest)` | Apply the ordinary client-body sequence and XOR transformation. | Returns `src_size + 1`. |
+| `Darkages.exe:0x00498080` | `util_ring_buffer_push_wait` | `void __thiscall(void *ring_buffer, const void *element)` | Append a synchronized bounded-ring record. | Waits indefinitely on the not-full condition when the Socket queue reaches 128 records. |
 | `Darkages.exe:0x004A8414` | `net_set_xor_key` | `void __stdcall(int length, const uint8_t *key)` | Replace the runtime XOR key. | Requires length at most 9 and writes four repeated copies. |
 | `Darkages.exe:0x004A8590` | `net_build_xor_table` | `void __stdcall(int function_index)` | Generate the 256-entry XOR table. | Accepts function indexes 0 through 9. |
 | `Darkages.exe:0x00468A90` | `ui_map_dispatch_server_packet` | `int __thiscall(void *this, void *event)` | Dispatch in-game server actions in `MapPane`. | Supports 31 fixed action values. |
