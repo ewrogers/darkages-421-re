@@ -39,8 +39,16 @@ The following panes have established construction, virtual-table, and handler ev
 | `MainMenuPane` | `ui_main_menu_pane` at `Darkages.exe:0x004F51AC`, `0x124` bytes | `ui_main_menu_pane_vtable` at `Darkages.exe:0x005177C0` | `ui_main_menu_handle_mouse_event` | `ui_main_menu_handle_key_event` | `ui_main_menu_handle_server_packet` | `ui_pane_default_timer_handler` |
 | `BackgroundPane` | `ui_background_pane` at `Darkages.exe:0x004F51B4`, `0x144` bytes | `ui_background_pane_vtable` at `Darkages.exe:0x00500700` | `ui_background_pane_handle_mouse_event` | `ui_pane_default_key_handler` | `ui_handle_server_request_portrait` | `ui_background_pane_handle_timer` |
 | `MapPane` | `ui_map_pane` at `Darkages.exe:0x004F51B0`, `0xF38` bytes | `ui_map_pane_vtable` at `Darkages.exe:0x00519280` | `ui_map_handle_mouse_event` | `ui_map_handle_key_event` | `ui_map_dispatch_server_packet` | `ui_map_handle_timer` |
-| `ServerSelectDialogPane` | Dynamic, `0x554` bytes | `ui_server_select_dialog_pane_vtable` at `Darkages.exe:0x00526140` | `ui_server_select_handle_mouse_event` | `Darkages.exe:0x0042AED0` | `ui_server_select_handle_server_packet` | `Darkages.exe:0x0040A0B0` |
-| Exit-wait pane | Dynamic | `ui_exit_wait_pane_vtable` at `Darkages.exe:0x005207E0` | `Darkages.exe:0x0042A190` | `Darkages.exe:0x0042AED0` | `ui_exit_wait_handle_server_packet` | `Darkages.exe:0x0040A0B0` |
+| `ServerSelectDialogPane` | Dynamic, `0x554` bytes | `ui_server_select_dialog_pane_vtable` at `Darkages.exe:0x00526140` | `ui_server_select_handle_mouse_event` | `ui_dialog_handle_key_event` | `ui_server_select_handle_server_packet` | `ui_dialog_default_timer_handler` |
+| Exit-wait pane | Dynamic | `ui_exit_wait_pane_vtable` at `Darkages.exe:0x005207E0` | `ui_dialog_handle_mouse_event` | `ui_dialog_handle_key_event` | `ui_exit_wait_handle_server_packet` | `ui_dialog_default_timer_handler` |
+
+### Friendly class names and concrete event coverage
+
+The executable has no usable Microsoft RTTI for this hierarchy, but it retains many class and method diagnostics. A friendly class name is treated as confirmed only when the same constructor, destructor, or virtual method also installs or is stored in the candidate vtable. This establishes names such as `BulletinDialogPane`, `ArticleListDialog`, `MailListPane`, `LegendDialogPane`, `MonsterPane2`, `EffectObjectPane`, and `WeatherPane` without relying on nearby text alone. The complete confirmed name-to-vtable map is in [Pane Virtual Table Inventory](../appendices/ui-pane-vtables.md#confirmed-friendly-class-names).
+
+A vtable identifies the broad Event families a pane can receive. The handler body supplies the narrower filter. For example, `ServerSelectDialogPane` has mouse, keyboard, socket, and timer slots, but its mouse override only adds behavior for a left double-click and its socket override only claims server action `0x56`. The inherited Dialog handlers still process their ordinary mouse and keyboard cases. This distinction is important for runtime hooks because a non-default slot does not imply that every subtype is consumed.
+
+The client dispatches key-down Events only. Key-up updates EventMan state but does not enter the pane hierarchy. Timer callbacks are also separate from the numbered Event types: the timer worker calls pane slot `+0x44` with a class-local callback identifier and two payload values.
 
 The socket handler is not a Winsock callback. Socket bytes are decoded and converted to internal Event type 9 before the dispatcher calls pane slot `+0x40`. The packet path is documented in [Networking](networking.md#receive-and-event-routing), while Win32 `WM_*` handling remains in [Input and Windows Events](input-and-events.md).
 
@@ -91,6 +99,60 @@ External readers can race Screen changes, event registration, and deferred delet
 | `+0x44` | Pane timer callback | `ui_pane_default_timer_handler` |
 | `+0x48` | Additional class-specific handler | Base is `nullsub_6`; the generic role is not yet established. |
 | `+0x4C` | Optional class-specific handler | Absent in the base table; `TextEdit` calls its override on Enter. |
+
+### Event values and handler filters
+
+The dispatcher reads the byte at Event offset `+0x0C`. Mouse subtype values and their Win32 production paths are established in [Input and Windows Events](input-and-events.md#mouse-queue-and-worker-path).
+
+| Event type | Meaning | Pane virtual slot and notes |
+|---:|---|---|
+| `0` | Mouse move | `+0x38` |
+| `1` | Left single-button down | `+0x38` |
+| `2` | Left double-button down | `+0x38`; recognized by EventMan, not `WM_LBUTTONDBLCLK` |
+| `3` | Left-button up | `+0x38` |
+| `4` | Right single-button down | `+0x38` |
+| `5` | Right double-button down | `+0x38`; recognized by EventMan, not `WM_RBUTTONDBLCLK` |
+| `6` | Right-button up | `+0x38` |
+| `7` | Mouse wheel | `+0x38`; payload is the signed wheel delta divided by 120 |
+| `8` | Mapped key down | `+0x3C`; there is no pane-dispatched key-up Event |
+| `9` | Decoded socket packet or terminal bootstrap bytes | `+0x40` |
+
+The following filters are comparisons in the named handler bodies. A handler that delegates to `ui_dialog_handle_mouse_event` can still inherit the generic Dialog cases after its class-specific work.
+
+| Class or shared handler | Accepted mouse subtype values | Established behavior |
+|---|---|---|
+| `ui_dialog_handle_mouse_event` | `0`, `1`, `2`, `3`, `4`, `7` | Generic Dialog hover, button, drag, and wheel processing. There is no explicit subtype `5` or `6` branch. |
+| `ui_bulletin_dialog_handle_mouse_event` | Adds `1` and `3`, then delegates | Captures and releases Bulletin-family dialog drag state. |
+| `LegendDialogPane` | Adds `1` and `4`, then delegates | Captures position on left down and invokes its class action on right down. |
+| `BackPane` | `1` | Starts its button animation or help-button timer. |
+| `MainMenuPane` | `0`, `3` | Tracks menu hover and activates the released selection. |
+| `QuestionMessageDialog` and `QuestionMessageFaceDialog` | Adds `1` and `3`, then delegates | Captures and releases dialog drag state. |
+| `ServerSelectDialogPane` | Adds `2`, then delegates | Selects one of five server rows on left double-click. |
+| `TerminalPane` | `1`, `3` | Presses and releases its three connection controls. |
+
+Keyboard handlers receive Event type `8` and compare the mapped key byte at Event offset `+0x10`. Values below are recorded as the handler sees them. They are not assumed to be raw `WM_*` virtual-key values.
+
+| Class or shared handler | Explicit mapped key values | Established behavior |
+|---|---|---|
+| `ui_dialog_handle_key_event` | `0x09`, `0x0D`, `0x20`, `0x1B`, `0x90` | Tab, Enter, Space, Escape, screen action `0x90`, plus focused-control forwarding. |
+| `BulletinDialogPane` and `BoardListDialog` | `Q/q`, `W/w`, `E/e`, `0x90` | Shared Bulletin-family navigation and focused-control forwarding. |
+| `ArticleListDialog` | `V/v`, `N/n`, `0x1B`, `0x84` | View, new-article, close, and class-specific list actions. |
+| `MailListDialog` | `V/v`, `N/n`, `R/r`, `0x1B`, `0x84` | View, new, reply, close, and class-specific list actions. |
+| `NewArticleDialog` and `NewMailDialog` | `0x09`, `0x0D`, `0x1B` | Focus traversal, submit through the focused control, and cancel. |
+
+Socket Event handlers filter on the first decoded byte or, where noted, a second subtype byte. The Map action set is kept in the protocol index because each branch has its own parser and side effects.
+
+| Receiver | Claimed socket input | Notes |
+|---|---|---|
+| Bulletin dialog family | Server action `0x31` | Calls the receiver's class-specific virtual at `+0x64`. |
+| `MainMenuPane` | Server actions `0x00`, `0x02`, `0x03`, `0x0A` | Bootstrap, version, and main-menu transitions. |
+| `BackPane` | Server action `0x49` | Portrait request. |
+| `MapPane` | 31 action bytes from `0x03` through `0x4B` | Exact switch coverage is in [Server Actions](../protocol/server-actions.md#mappane-switch-coverage). |
+| Exit-wait pane | Server action `0x4C`, subtype `1` | Completes the orderly-exit exchange. |
+| `ServerSelectDialogPane` | Server action `0x56` | Parses the server table. |
+| `TerminalPane` | Bootstrap byte stream states `0` through `7` | Stateful terminal protocol, not an ordinary packet-action switch. |
+
+Timer callback identifiers are local to the receiving class. `BackPane` uses IDs `0`, `1`, and `2`; `MapPane` and `ScreenPane` each dispatch IDs `0` through `4`. These values share no global enum with Event types `0` through `9`.
 
 ### Packed hierarchy representation
 
@@ -176,16 +238,29 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 
 | Address | Current IDA name | Prototype | Purpose | Call relationships and notes |
 |---:|---|---|---|---|
+| `Darkages.exe:0x0040A0A0` | `ui_dialog_default_socket_handler` | `int __thiscall(void *, void *)` | Decline a socket Event. | Default Dialog vslot `+0x40`; always returns zero. |
+| `Darkages.exe:0x0040A0B0` | `ui_dialog_default_timer_handler` | `int __thiscall(void *, int, int, int)` | Decline a timer callback. | Default Dialog vslot `+0x44`; always returns zero. |
 | `Darkages.exe:0x0040A5A0` | `ui_pane_default_key_handler` | established Pane virtual handler | Default keyboard Event handler. | Base vtable slot `+0x3C`; inherited by panes without a keyboard override. |
 | `Darkages.exe:0x0040A5B0` | `ui_background_pane_ctor` | established `__thiscall` constructor | Construct the in-game background pane. | Called by `ui_main_menu_create_game_panes`; object size is `0x144`. |
 | `Darkages.exe:0x0040B460` | `ui_pane_default_mouse_handler` | established Pane virtual handler | Default mouse Event handler. | Base vtable slot `+0x38`. |
 | `Darkages.exe:0x0040B470` | `ui_pane_default_socket_handler` | established Pane virtual handler | Default socket Event handler. | Base vtable slot `+0x40`. |
 | `Darkages.exe:0x0040EA50` | `ui_pane_default_timer_handler` | established Pane timer handler | Default timer callback. | Base vtable slot `+0x44`. |
+| `Darkages.exe:0x00414130` | `ui_bulletin_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process shared Bulletin-family key actions. | Vslot `+0x3C` for `BulletinDialogPane` and `BoardListDialog`. |
+| `Darkages.exe:0x00414260` | `ui_bulletin_dialog_handle_server_packet` | `int __thiscall(void *, void *)` | Dispatch Bulletin-family server action `0x31`. | Vslot `+0x40`; calls class vslot `+0x64`. |
+| `Darkages.exe:0x004142E0` | `ui_bulletin_dialog_handle_mouse_event` | `int __thiscall(void *, void *)` | Add Bulletin-family drag tracking. | Vslot `+0x38`; handles subtypes `1` and `3`, then delegates to Dialog. |
+| `Darkages.exe:0x00415A10` | `ui_article_list_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process ArticleListDialog key actions. | Handles mapped `V/v`, `N/n`, Escape, and `0x84`. |
+| `Darkages.exe:0x004181A0` | `ui_new_article_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process NewArticleDialog editing keys. | Handles Tab, Enter, Escape, and focused controls. |
+| `Darkages.exe:0x004184C0` | `ui_mail_list_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process MailListDialog key actions. | Adds mapped reply keys `R/r` to the list-dialog actions. |
+| `Darkages.exe:0x0041AE70` | `ui_new_mail_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process NewMailDialog editing keys. | Handles Tab, Enter, Escape, and focused controls. |
+| `Darkages.exe:0x0041C4D0` | `ui_legend_dialog_pane_ctor` | established `__thiscall` constructor | Construct the outer `LegendDialogPane` and its inner list control. | Installs `ui_legend_dialog_pane_vtable`; the inner `0x00506BE0` class remains unnamed. |
+| `Darkages.exe:0x0041C770` | `ui_legend_dialog_pane_handle_mouse_event` | `int __thiscall(void *, void *)` | Process LegendDialogPane mouse input. | Adds subtypes `1` and `4`, then delegates to Dialog. |
 | `Darkages.exe:0x00431150` | `event_dispatcher_register_pane` | `void __thiscall(void *, void *, int, int)` | Insert a pane into the event hierarchy. | Reached directly for the root and through Pane vslot `+0x30`. |
 | `Darkages.exe:0x004311B0` | `event_dispatcher_unregister_pane` | `void __thiscall(void *, void *)` | Remove a pane from the event hierarchy. | Reached through Pane vslot `+0x34` and several explicit cleanup paths. |
 | `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | `int __thiscall(void *, void *, void *)` | Traverse child-first and call the event-specific pane slot. | Selects `+0x38`, `+0x3C`, or `+0x40` for Event types 0 through 9. |
 | `Darkages.exe:0x004325D0` | `event_is_mouse` | `int __thiscall(void *event)` | Test Event type 0 through 7. | Used by `event_dispatch_hierarchy`. |
 | `Darkages.exe:0x004325F0` | `event_is_keyboard` | `int __thiscall(void *event)` | Test Event type 8. | Used by `event_dispatch_hierarchy`. |
+| `Darkages.exe:0x0042A190` | `ui_dialog_handle_mouse_event` | `int __thiscall(void *, void *)` | Process generic Dialog mouse input. | Explicit cases are `0`, `1`, `2`, `3`, `4`, and `7`. |
+| `Darkages.exe:0x0042AED0` | `ui_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process generic Dialog key input and forward to the focused control. | Handles Event type `8` only. |
 | `Darkages.exe:0x00442C04` | `ui_game_buttons_remove_skill_pane` | established `__thiscall` removal method | Remove, unregister, delete, and clear an indexed skill pane. | Counterpart to `ui_game_buttons_create_skill_pane`. |
 | `Darkages.exe:0x00442D14` | `ui_game_buttons_create_skill_pane` | established `__thiscall` creation method | Allocate and register an indexed `0x294`-byte skill pane. | Stores the heap pointer in its owner. |
 | `Darkages.exe:0x00443E14` | `ui_game_buttons_remove_spell_pane` | established `__thiscall` removal method | Remove, unregister, delete, and clear an indexed spell pane. | Counterpart to `ui_game_buttons_create_spell_pane`. |
@@ -196,11 +271,15 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x0045D930` | `ui_main_menu_pane_ctor` | established `__thiscall` constructor | Construct and publish `MainMenuPane`. | Called by terminal completion and the in-game return path. |
 | `Darkages.exe:0x0045FA44` | `ui_main_menu_create_game_panes` | established `__thiscall` transition method | Build and publish the in-game pane graph. | Constructs BackgroundPane, MapPane, and child panes. |
 | `Darkages.exe:0x004658C0` | `ui_map_pane_ctor` | established `__thiscall` constructor | Construct `MapPane`. | Called for a `0xF38`-byte allocation during game UI creation. |
+| `Darkages.exe:0x0047DBA0` | `ui_question_message_dialog_handle_mouse_event` | `int __thiscall(void *, void *)` | Add drag tracking for the question-message dialog family. | Handles subtypes `1` and `3`, then delegates to Dialog. |
+| `Darkages.exe:0x0048D2E0` | `ui_effect_object_pane_handle_timer` | established Pane timer handler | Process `EffectObjectPane` timer callbacks. | Class name and method are confirmed by the vslot and diagnostic. |
 | `Darkages.exe:0x00498F20` | `ui_screen_registry_ctor` | `void *__thiscall(void *registry)` | Construct the Screen composition registry. | Requests a `0x34`-byte hierarchy payload. |
 | `Darkages.exe:0x00498F40` | `ui_screen_add_pane` | established `__thiscall` add method | Validate and insert a Screen pane node. | Called by `ui_pane_add_to_screen`. |
 | `Darkages.exe:0x004993C4` | `ui_screen_find_pane_node` | established recursive `__thiscall` search | Find a pane and optionally return its list and index. | Used for parent, sibling, removal, and coordinate queries. |
 | `Darkages.exe:0x00499530` | `ui_screen_remove_pane` | established `__thiscall` removal method | Remove a pane node and child hierarchy. | Called by `ui_pane_remove_from_screen`. |
 | `Darkages.exe:0x00499ED0` | `ui_screen_get_pane_origin` | established `__thiscall` query | Accumulate a pane's screen-space origin. | Walks Screen hierarchy parent links. |
+| `Darkages.exe:0x004A1680` | `ui_scrollable_pane_handle_mouse_event` | `int __thiscall(void *, void *)` | Route mouse input through scroll bars and the list body. | Base mouse path for `ArticleListPane`, `MailListPane`, and `ItemListPane`. |
+| `Darkages.exe:0x004A1900` | `ui_scrollable_pane_handle_key_event` | `int __thiscall(void *, void *)` | Route key input through scroll bars and the list body. | Base key path for the same scrollable list panes. |
 | `Darkages.exe:0x00492A90` | `ui_pane_dtor` | `void __thiscall(void *pane)` | Cancel timers and destroy the Pane base. | Does not remove either hierarchy registration. |
 | `Darkages.exe:0x00492AD0` | `ui_pane_ctor` | `void *__thiscall(void *, unsigned char, unsigned char)` | Construct the common Pane base. | Installs `ui_pane_vtable` and initializes bounds and flags. |
 | `Darkages.exe:0x004933C0` | `ui_pane_add_to_screen` | `void __thiscall(void *, const RECT *, void *, void *)` | Add this pane to Screen composition. | Pane vslot `+0x28`; delegates to `ui_screen_add_pane`. |

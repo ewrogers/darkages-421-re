@@ -4,7 +4,45 @@ This appendix lists every virtual table that shares the confirmed `Pane` registr
 
 No usable Microsoft C++ class RTTI or type-descriptor names were found for this family. The virtual-table address is therefore the reliable runtime discriminator. Each object begins with one of these table pointers while that implementation is active.
 
-The linked code family is included only where constructor, destructor, handler, or diagnostic data flow associates the table with that implementation unit. It does not assert an original C++ class name. `Unassigned` means that the common Pane layout is established but the owning class has not met the naming threshold.
+The linked code family is included only where constructor, destructor, handler, or diagnostic data flow associates the table with that implementation unit. It does not by itself assert an original C++ class name. `Unassigned` means that the common Pane layout is established but neither the owning implementation unit nor class has met the naming threshold.
+
+## Confirmed friendly class names
+
+The following names meet the stronger class threshold. Each name is connected to its exact vtable by a direct table installation, a class-specific virtual stored in that table, or both. Diagnostic text is supporting evidence only after that instruction-level connection is established.
+
+Event coverage uses `M` for mouse Event types `0` through `7`, `K` for key-down Event type `8`, `S` for socket Event type `9`, and `T` for the separate timer callback slot. `M1`, for example, means mouse subtype `1`. `Default` means the slot returns without class-specific behavior. The full handler addresses remain in the complete inventory below.
+
+| Friendly class | Vtable and current IDA name | Direct confirming evidence | Concrete Event-facing behavior |
+|---|---|---|---|
+| `AggrementDialogPane` | `Darkages.exe:0x005002C0`<br>`ui_aggrement_dialog_pane_vtable` | Destructor diagnostic plus direct table installation. The spelling `Aggrement` is the binary's spelling. | Generic Dialog `M/K`; default `S/T`. |
+| `BackPane` | `Darkages.exe:0x00500700`<br>`ui_background_pane_vtable` | `BackPane.cpp`, the `gpBackPane` diagnostic, and `ui_background_pane_ctor`. Documentation uses `BackgroundPane` for its role. | `M1`; `S 0x49`; `T 0,1,2`. |
+| `BulletinDialogPane` | `Darkages.exe:0x00501EC0`<br>`ui_bulletin_dialog_pane_vtable` | Constructor diagnostic and `ui_bulletin_dialog_pane_register` at class vslot `+0x60`. | Adds `M1/M3` to Dialog behavior; custom `K`; `S 0x31`; default `T`. |
+| `ArticleListDialog` | `Darkages.exe:0x00501F40`<br>`ui_article_list_dialog_vtable` | Constructor diagnostic and `ui_article_list_dialog_start_new_article_editing` at `+0x4C`. | Adds `M1/M3`; custom `K`; `S 0x31`; default `T`. |
+| `MailListDialog` | `Darkages.exe:0x00501FC0`<br>`ui_mail_list_dialog_vtable` | Constructor diagnostic and class-specific key and completion handlers. | Adds `M1/M3`; custom `K`; `S 0x31`; default `T`. |
+| `NewArticleDialog` | `Darkages.exe:0x005020C0`<br>`ui_new_article_dialog_vtable` | Constructor diagnostic and `ui_new_article_dialog_handle_control_click` at `+0x4C`. | Adds `M1/M3`; `K` Tab/Enter/Escape; `S 0x31`; default `T`. |
+| `NewMailDialog` | `Darkages.exe:0x00502140`<br>`ui_new_mail_dialog_vtable` | Constructor diagnostic and `ui_new_mail_dialog_handle_control_click` at `+0x4C`. | Adds `M1/M3`; `K` Tab/Enter/Escape; `S 0x31`; default `T`. |
+| `BoardListDialog` | `Darkages.exe:0x005021C0`<br>`ui_board_list_dialog_vtable` | Constructor diagnostics for its title, board count, controls, and completed object. | Adds `M1/M3`; shared Bulletin `K`; `S 0x31`; custom `T`. |
+| `ArticleDialog` | `Darkages.exe:0x00502240`<br>`ui_article_dialog_vtable` | Constructor diagnostic and directly installed table. | Adds `M1/M3`; custom `K`; `S 0x31`; default `T`. |
+| `MailDialog` | `Darkages.exe:0x005022C0`<br>`ui_mail_dialog_vtable` | Constructor diagnostic and directly installed table. | Adds `M1/M3`; custom `K`; `S 0x31`; default `T`. |
+| `ArticleListPane` | `Darkages.exe:0x005023E0`<br>`ui_article_list_pane_vtable` | Constructor diagnostic and `ui_article_list_pane_draw_cell` at `+0x84`. | Scrollable `M/K`; default `S/T`. |
+| `MailListPane` | `Darkages.exe:0x00502580`<br>`ui_mail_list_pane_vtable` | Constructor diagnostic plus selection-double-click and DrawCell virtuals at `+0x80/+0x84`. | Scrollable `M/K`; default `S/T`. |
+| `LegendDialogPane` | `Darkages.exe:0x00506C80`<br>`ui_legend_dialog_pane_vtable` | `ui_legend_dialog_pane_ctor` installs this table on the outer dialog. Its separately allocated inner object uses `0x00506BE0` and remains unnamed. | Adds `M1/M4` to Dialog behavior; generic Dialog `K`; default `S/T`. |
+| `HumanImageControlPane` | `Darkages.exe:0x005134E0`<br>`ui_human_image_control_pane_vtable` | `ui_human_image_control_pane_draw` at vslot `+0x48` and its class diagnostic. | Control `M/K`; default `S/T`; Draw at `+0x48`. |
+| `MainMenuPane` | `Darkages.exe:0x005177C0`<br>`ui_main_menu_pane_vtable` | `ui_main_menu_pane_ctor`, static root publication, and class diagnostics. | `M0/M3`; custom `K`; `S 0x00/0x02/0x03/0x0A`; default `T`. |
+| `MapPane` | `Darkages.exe:0x00519280`<br>`ui_map_pane_vtable` | `ui_map_pane_ctor`, static root publication, and multiple class-specific virtuals and diagnostics. | Custom `M/K`; 31 `S` actions; `T 0..4`. |
+| `ItemListPane` | `Darkages.exe:0x0051B6C0`<br>`ui_item_list_pane_vtable` | `ui_item_list_pane_draw_cell` at `+0x84` and its class diagnostic. | Scrollable `M/K`; default `S/T`; DrawCell at `+0x84`. |
+| `MonsterImageControlPane` | `Darkages.exe:0x0051BE60`<br>`ui_monster_image_control_pane_vtable` | `ui_monster_image_control_pane_draw` at `+0x48` and its class diagnostic. | Control `M/K`; default `S/T`; Draw at `+0x48`. |
+| `QuestionMessageDialog` | `Darkages.exe:0x0051C0C0`<br>`ui_question_message_dialog_vtable` | `ui_question_message_dialog_send_answer` at `+0x74` and matching class diagnostics. | Adds `M1/M3` to Dialog behavior; generic Dialog `K`; default `S/T`. |
+| `QuestionMessageFaceDialog` | `Darkages.exe:0x0051C140`<br>`ui_question_message_face_dialog_vtable` | Class-specific user-dialog virtual at `+0x64` and `ui_question_message_face_dialog_send_answer` at `+0x74`. | Adds `M1/M3` to Dialog behavior; generic Dialog `K`; default `S/T`. |
+| `MonsterPane2` | `Darkages.exe:0x0051D700`<br>`ui_monster_pane2_vtable` | `ui_monster_pane2_start_move` at `+0x64` and its class diagnostics. | Custom `M/S/T`; base `K`. |
+| `EffectObjectPane` | `Darkages.exe:0x0051FB00`<br>`ui_effect_object_pane_vtable` | `ui_effect_object_pane_handle_timer` at `+0x44` and its method diagnostic. | Custom `M/S/T`; base `K`. |
+| `Pane` | `Darkages.exe:0x005213A0`<br>`ui_pane_vtable` | `ui_pane_ctor`, base destructor, and shared registration layout. | Base handlers are default `M/K/S/T`. |
+| `ScreenPane` | `Darkages.exe:0x00524CE0`<br>`ui_screen_pane_vtable` | Persistent root construction, static publication, and Screen-specific keyboard and timer virtuals. | Custom `K/T`; default `M/S`. |
+| `ServerSelectDialogPane` | `Darkages.exe:0x00526140`<br>`ui_server_select_dialog_pane_vtable` | Constructor and destructor diagnostics plus `ui_server_select_handle_mouse_event`. | Adds `M2` to Dialog behavior; generic Dialog `K`; `S 0x56`; default `T`. |
+| `SpellBookDialog` | `Darkages.exe:0x00528280`<br>`ui_spell_book_dialog_vtable` | `ui_spell_book_dialog_draw` at `+0x48` and its method diagnostic. | Generic Dialog `M/K`; default `S/T`; Draw at `+0x48`. |
+| `SkillBookDialog` | `Darkages.exe:0x005282E0`<br>`ui_skill_book_dialog_vtable` | `ui_skill_book_dialog_draw` at `+0x48` and its method diagnostic. | Generic Dialog `M/K`; default `S/T`; Draw at `+0x48`. |
+| `TerminalPane` | `Darkages.exe:0x00529000`<br>`ui_terminal_pane_vtable` | Constructor, static root publication, and class-specific bootstrap diagnostics. | `M1/M3`; custom `K`; bootstrap-stream `S`; default `T`. |
+| `WeatherPane` | `Darkages.exe:0x0052CFA0`<br>`ui_weather_pane_vtable` | `ui_weather_pane_draw` at `+0x48` and its class diagnostics. | Custom `T`; default `M/K/S`; Draw at `+0x48`. |
 
 The installing or restoring column contains functions with direct references to the table. It commonly includes both a constructor and a destructor that restores the derived table during cleanup. Handler slots have these established roles:
 
@@ -19,9 +57,9 @@ The installing or restoring column contains functions with direct references to 
 
 All addresses below are virtual addresses in `Darkages.exe`.
 
-| Linked code family | Vtable | Installing or restoring functions | Mouse `+0x38` | Keyboard `+0x3C` | Socket `+0x40` | Timer `+0x44` | Other `+0x48`, `+0x4C` |
+| Linked code family or confirmed class | Vtable | Installing or restoring functions | Mouse `+0x38` | Keyboard `+0x3C` | Socket `+0x40` | Timer `+0x44` | Other `+0x48`, `+0x4C` |
 |---|---:|---|---|---|---|---|---|
-| Unassigned | `Darkages.exe:0x005002C0` | `Darkages.exe:0x0040A034`<br>`Darkages.exe:0x0040A0E0` | `Darkages.exe:0x0042A190` | `Darkages.exe:0x0042AED0` | `Darkages.exe:0x0040A0A0` | `Darkages.exe:0x0040A0B0` | `Darkages.exe:0x0042B520`<br>`Darkages.exe:0x0040A420` |
+| AggrementDialogPane | `Darkages.exe:0x005002C0` | `Darkages.exe:0x0040A034`<br>`Darkages.exe:0x0040A0E0` | `Darkages.exe:0x0042A190` | `Darkages.exe:0x0042AED0` | `Darkages.exe:0x0040A0A0` | `Darkages.exe:0x0040A0B0` | `Darkages.exe:0x0042B520`<br>`Darkages.exe:0x0040A420` |
 | BackPane.cpp | `Darkages.exe:0x00500700` | `Darkages.exe:0x0040A564`<br>`Darkages.exe:0x0040A5B0` | `ui_background_pane_handle_mouse_event`<br>`Darkages.exe:0x0040B0C0` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `ui_handle_server_request_portrait`<br>`Darkages.exe:0x0040B3A0` | `ui_background_pane_handle_timer`<br>`Darkages.exe:0x0040B240` | `Darkages.exe:0x0040AD00`<br>`0` |
 | BalloonPane.cpp | `Darkages.exe:0x00500E00` | `Darkages.exe:0x0040B480` | `ui_pane_default_mouse_handler`<br>`Darkages.exe:0x0040B460` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `ui_pane_default_socket_handler`<br>`Darkages.exe:0x0040B470` | `Darkages.exe:0x0040BB60` | `Darkages.exe:0x0040BE70`<br>`0` |
 | BlackHole.cpp | `Darkages.exe:0x00501640` | `Darkages.exe:0x0040CE10`<br>`Darkages.exe:0x0040D060`<br>`Darkages.exe:0x0040D270` | `Darkages.exe:0x0040D2A0` | `Darkages.exe:0x0040D5E0` | `ui_pane_default_socket_handler`<br>`Darkages.exe:0x0040B470` | `Darkages.exe:0x0040DE20` | `Darkages.exe:0x0040D940`<br>`0` |
@@ -143,7 +181,7 @@ All addresses below are virtual addresses in `Darkages.exe`.
 | Message.cpp | `Darkages.exe:0x0051C240` | `Darkages.exe:0x004812C0` | `Darkages.exe:0x0047DBA0` | `Darkages.exe:0x0042AED0` | `Darkages.exe:0x0040A0A0` | `Darkages.exe:0x0040A0B0` | `Darkages.exe:0x00482070`<br>`Darkages.exe:0x00481600` |
 | Message.cpp | `Darkages.exe:0x0051C2C0` | `Darkages.exe:0x00482230` | `Darkages.exe:0x0047DBA0` | `Darkages.exe:0x0042AED0` | `Darkages.exe:0x0040A0A0` | `Darkages.exe:0x0040A0B0` | `Darkages.exe:0x0042B520`<br>`Darkages.exe:0x004824F0` |
 | Unassigned | `Darkages.exe:0x0051CAA0` | `Darkages.exe:0x00483120`<br>`Darkages.exe:0x00483770` | `ui_pane_default_mouse_handler`<br>`Darkages.exe:0x0040B460` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `Darkages.exe:0x00483C30` | `ui_pane_default_timer_handler`<br>`Darkages.exe:0x0040EA50` | `nullsub_6`<br>`Darkages.exe:0x0040EA60`<br>`0` |
-| Unassigned | `Darkages.exe:0x0051D700` | `Darkages.exe:0x004859E4`<br>`Darkages.exe:0x00485B00` | `Darkages.exe:0x0048EC60` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `Darkages.exe:0x0044FE20` | `Darkages.exe:0x004865A0` | `Darkages.exe:0x00486100`<br>`Darkages.exe:0x0048E3D0` |
+| MonsterPane2 | `Darkages.exe:0x0051D700` | `Darkages.exe:0x004859E4`<br>`Darkages.exe:0x00485B00` | `Darkages.exe:0x0048EC60` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `Darkages.exe:0x0044FE20` | `Darkages.exe:0x004865A0` | `Darkages.exe:0x00486100`<br>`Darkages.exe:0x0048E3D0` |
 | Unassigned | `Darkages.exe:0x0051E100` | `Darkages.exe:0x00487320`<br>`Darkages.exe:0x00487360` | `ui_pane_default_mouse_handler`<br>`Darkages.exe:0x0040B460` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `ui_pane_default_socket_handler`<br>`Darkages.exe:0x0040B470` | `ui_pane_default_timer_handler`<br>`Darkages.exe:0x0040EA50` | `nullsub_6`<br>`Darkages.exe:0x0040EA60`<br>`0` |
 | Unassigned | `Darkages.exe:0x0051E980` | `Darkages.exe:0x004876C4`<br>`Darkages.exe:0x00487700` | `Darkages.exe:0x00487C40` | `Darkages.exe:0x00487C70` | `Darkages.exe:0x004889F0` | `Darkages.exe:0x00489980` | `Darkages.exe:0x004506B0`<br>`Darkages.exe:0x0048E3D0` |
 | ObjectPane.cpp | `Darkages.exe:0x0051FA40` | `Darkages.exe:0x0048C514` | `Darkages.exe:0x0048BFB0` | `ui_pane_default_key_handler`<br>`Darkages.exe:0x0040A5A0` | `Darkages.exe:0x0044FE20` | `Darkages.exe:0x0048BFC0` | `nullsub_35`<br>`Darkages.exe:0x0048BFD0`<br>`Darkages.exe:0x00452B90` |
