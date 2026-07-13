@@ -2,7 +2,7 @@
 
 The 4.21 client exposes enough stable process state to build a useful read-only UI inspector. Static module globals lead to the Screen composition tree, the Event receiver tree, and several important persistent panes. Heap pane objects share a common base layout, and their first pointer identifies the concrete implementation through a module-relative virtual-table address.
 
-This page is a runtime lookup reference. It describes addresses and fields confirmed by code paths that construct, read, update, or destroy them. The broader static global catalog is in [Data Map](data-map.md), and the complete pane-class discriminator list is in [Pane Virtual Table Inventory](ui-pane-vtables.md).
+This page is a runtime lookup reference. It describes addresses and fields confirmed by code paths that construct, read, update, or destroy them. The broader static global catalog is in [Data Map](data-map.md), and the complete pane-class discriminator list is in [Pane Virtual Table Inventory](ui-pane-vtables.md). [Event Proxy IPC, Rules, and State](../event-proxy/ipc-rules-and-state.md#runtime-state-and-memory-access) applies these paths to late-attach snapshots and guarded peek or poke requests.
 
 ## High-level operation
 

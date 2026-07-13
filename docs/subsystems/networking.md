@@ -49,7 +49,7 @@ The executable contains 52 established client action values and 59 server action
 
 The TCP reader refills a `0x18000` byte cache with `recv` and then supplies one byte at a time to the framer. This preserves a partial header or body across Windows notifications and permits multiple complete frames to be drained from one receive cache.
 
-After a frame is complete, the client decodes it when required and posts a copy as internal work code `0x0E`. The event worker converts that work item into an Event with type 9, packet pointer at offset `+0x14`, and packet size at offset `+0x18`. The event manager recursively walks the pane hierarchy and calls virtual slot `+0x40` on each eligible pane. That virtual method is the pane's server-packet handler.
+After a frame is complete, the client decodes it when required and posts a copy as internal work code `0x0E`. The EventMan worker converts that work item into an Event with type 9, packet pointer at offset `+0x14`, and packet size at offset `+0x18`. It queues a copied Event to the dispatcher worker, which recursively walks the pane hierarchy and calls virtual slot `+0x40` on each eligible pane. That virtual method is the pane's server-packet handler.
 
 Dispatch is therefore distributed rather than centralized. `MapPane` owns the largest switch, while `MainMenuPane`, `ServerSelectDialogPane`, exchange panes, bulletin panes, and other UI objects handle actions relevant to their current state. The [server action index](../protocol/server-actions.md) combines those separate handlers.
 
@@ -60,6 +60,8 @@ Packet builders assemble a logical packet in a local byte array and call `net_c_
 The send path treats `SOCKET_ERROR` as failure. It does not retry when `send` succeeds with a byte count smaller than the requested frame length. A compatible implementation should use a full-write loop even though this client does not.
 
 During a server transfer state, `net_c_queue_send` drops every client action except `0x10`, the client transfer-server action.
+
+The active Socket is reachable through `net_socket_instance` at `Darkages.exe:0x004F51BC`. EventMan owns the Socket at object offset `+0x68`, publishes the static root during construction, and clears it during destruction. This is the established runtime root for logical packet injection, but callers must still validate the live `net_socket_vtable` before using a cached pointer. See [Event Proxy Hooks and Injection](../event-proxy/hooks-and-injection.md) for the injection contract and ownership boundaries.
 
 ### Packet representation and C++ class evidence
 
@@ -138,7 +140,7 @@ win_main_window_proc
 
 `net_s_receive_frames` maintains three important pieces of persistent state: whether a frame is open, the number of header or body bytes collected, and the current body length. It combines the first two body-header bytes as `(high << 8) | low`. Completion occurs after exactly `body_length` bytes have been placed in the packet buffer.
 
-`event_dispatch_hierarchy` tests Event type 9 with `event_is_socket_packet` before calling pane virtual slot `+0x40`. The return value indicates whether the event was consumed. The event manager frees the packet pointer after dispatch when the Event is a socket packet.
+`event_dispatch_hierarchy` tests Event type 9 with `event_is_socket_packet` before calling pane virtual slot `+0x40`. The return value indicates whether the event was consumed. After `event_dispatch` returns, `event_dispatcher_process_work_item` frees the packet pointer for a socket Event and deletes the copied Event.
 
 ### Build, encode, and send
 

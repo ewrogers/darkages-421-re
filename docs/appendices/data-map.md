@@ -14,6 +14,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x004F51B0` | `ui_map_pane` | `void *`, object `0xF38` bytes | UI | Current heap `MapPane`. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) | Published after game-pane creation and cleared during game teardown. RVA `0x000F51B0`. |
 | `Darkages.exe:0x004F51B4` | `ui_background_pane` | `void *`, object `0x144` bytes | UI | Current heap `BackgroundPane`. | [UI Panes and Registries](../subsystems/ui-panes.md#runtime-observation-roots) | Published with the game UI and cleared during game teardown. RVA `0x000F51B4`. |
 | `Darkages.exe:0x004F51B8` | `event_deferred_delete_queue` | `void *` | Events | Holds objects awaiting deletion by the dispatcher tick. | [Internal Event Routing](../subsystems/internal-events.md#periodic-tick-and-deferred-deletion) | Created during initialization, drained from last element to first, and deleted after the dispatcher. |
+| `Darkages.exe:0x004F51BC` | `net_socket_instance` | `void *` | Network and EventMan | Static root of the active heap Socket object. | [IPC, Rules, and State](../event-proxy/ipc-rules-and-state.md#static-roots) | EventMan owns the Socket at object `+0x68`, publishes this root during construction, and clears it during destruction. RVA `0x000F51BC`. |
 | `Darkages.exe:0x004F51C4` | `app_config` | `void *` | Application | Global configuration object. | [Startup and Shutdown](../lifecycle/startup.md#subsystem-initialization) | Constructed from `Darkages.cfg` when `English.nfo` exists, otherwise from `Legend.cfg`. |
 | `Darkages.exe:0x004F51C8` | `ui_screen_pane` | `void *` | UI and rendering | Global 640 by 480, 8-bit screen pane. | [Startup and Shutdown](../lifecycle/startup.md#subsystem-initialization) | Registered with the event dispatcher and reactivated around the message loop. |
 | `Darkages.exe:0x004F51CC` | `ui_screen_registry` | `void *` | UI | Heap Screen composition hierarchy. | [UI Panes and Registries](../subsystems/ui-panes.md#packed-hierarchy-representation) | Stride `0x3F`; list fields are at `+0x0C`, `+0x14`, `+0x18`, and `+0x1C`. RVA `0x000F51CC`. |
@@ -47,6 +48,7 @@ This appendix tracks important globals, tables, structures, virtual tables, and 
 | `Darkages.exe:0x0050C6C0` | `ui_equip_pane_vtable` | virtual table | User Equip pane | Runtime discriminator for the persistent equipment and self-look Pane. | [Runtime UI Memory Map](runtime-ui-memory-map.md#equipment-and-self-look-fields) | RVA `0x0010C6C0`. |
 | `Darkages.exe:0x0050D180` | `event_dispatcher_vtable` | `void *[8]` | Events | Virtual table for pane dispatch, work processing, wait handling, and periodic ticks. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-object-fields) | Slot `+0x10` points to `event_dispatcher_tick`. |
 | `Darkages.exe:0x0050D720` | `event_manager_vtable` | `void *[8]` | Events and network | EventMan worker and dispatch virtual table. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) | Its work-item processing path reaches `event_process_work_item`. |
+| `Darkages.exe:0x0050D740` | `event_vtable` | `void *[2]` | Events | Runtime discriminator installed in copied mouse, keyboard, and socket Event objects. | [Hooks and Injection](../event-proxy/hooks-and-injection.md#generic-event-injection) | Event objects are `0x24` bytes in this build. RVA `0x0010D740`. |
 | `Darkages.exe:0x00510300` | `ui_game_buttons_pane_vtable` | virtual table | `GameButtonsPane` | Runtime discriminator for the persistent in-game content owner. | [Runtime UI Memory Map](runtime-ui-memory-map.md#gamebuttonspane-fields) | RVA `0x00110300`. |
 | `Darkages.exe:0x00510420` | `ui_skill_inventory_pane_vtable` | virtual table | skill inventory parent | Runtime discriminator for the 36-entry skill inventory. | [Runtime UI Memory Map](runtime-ui-memory-map.md#skill-inventory-and-slot-panes) | RVA `0x00110420`. |
 | `Darkages.exe:0x00510480` | `ui_spell_inventory_pane_vtable` | virtual table | spell inventory parent | Runtime discriminator for the 36-entry spell inventory. | [Runtime UI Memory Map](runtime-ui-memory-map.md#spell-inventory-and-slot-panes) | RVA `0x00110480`. |
@@ -168,7 +170,7 @@ The Event object created for a decoded packet has these fields:
 | Offset | Width | Meaning | Lifetime |
 |---:|---:|---|---|
 | `+0x0C` | 1 | Event type, value 9 for a socket packet. | Set before queueing. |
-| `+0x14` | 4 | Owned decoded-packet pointer. | Freed by the event manager after pane dispatch. |
+| `+0x14` | 4 | Owned decoded-packet pointer. | Freed by the dispatcher worker after `event_dispatch` returns. |
 | `+0x18` | 4 | Decoded packet size. | Positive when the pointer is present. |
 
 Structures should use `unknown_XX` for an established field location whose meaning remains unknown.

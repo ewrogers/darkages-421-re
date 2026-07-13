@@ -23,6 +23,13 @@
 - [File System](subsystems/file-system.md)
 - [Networking](subsystems/networking.md)
 
+# Event Proxy
+
+- [Architecture](event-proxy/architecture.md)
+- [Hooks and Injection](event-proxy/hooks-and-injection.md)
+- [IPC, Rules, and State](event-proxy/ipc-rules-and-state.md)
+- [Version Profiles](event-proxy/version-profiles.md)
+
 # Data Formats
 
 - [Format Catalog](formats/overview.md)
