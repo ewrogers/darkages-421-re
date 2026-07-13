@@ -34,7 +34,7 @@ The payload occupies `7 + name_length + comment_length` bytes. The string encodi
 | `Darkages.exe:0x00443E14` | `ui_spell_inventory_remove_slot_pane` | Removes and deletes an existing slot child. |
 | `Darkages.exe:0x00443F24` | `ui_spell_inventory_create_slot_pane` | Allocates and registers a `0x214`-byte slot pane. |
 | `Darkages.exe:0x00456C70` | `ui_spell_slot_pane_ctor` | Retains the slot, display ID, type, strings, and trailing byte. |
-| `Darkages.exe:0x004889F0` | `sub_4889F0` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x004889F0` | `ui_local_user_handle_server_packet` | Accepts the action in the local-user Pane's Event type 9 packet handler. |
 
 ## Handler notes
 

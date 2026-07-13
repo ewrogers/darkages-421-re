@@ -21,11 +21,11 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 | Function address | Current IDA name | Role |
 |---:|---|---|
 | `Darkages.exe:0x00468A90` | `ui_map_dispatch_server_packet` | Accepts and dispatches the action in `MapPane`. |
-| `Darkages.exe:0x004889F0` | `sub_4889F0` | Accepts the action in its pane's Event type 9 packet handler. |
+| `Darkages.exe:0x004889F0` | `ui_local_user_handle_server_packet` | Accepts the action in the local-user Pane's Event type 9 packet handler. |
 
 ## Handler notes
 
-`Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`.
+`Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`.
 
 ## Schema status
 

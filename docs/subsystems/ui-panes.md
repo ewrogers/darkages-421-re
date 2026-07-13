@@ -277,6 +277,7 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x00443E14` | `ui_spell_inventory_remove_slot_pane` | `void __thiscall(void *, uint8_t)` | Remove, unregister, delete, and clear an indexed spell pane. | Counterpart to `ui_spell_inventory_create_slot_pane`. |
 | `Darkages.exe:0x00443F24` | `ui_spell_inventory_create_slot_pane` | `void __thiscall(void *, uint8_t, uint16_t, int8_t, const char *, const char *, uint8_t)` | Allocate and register an indexed `0x214`-byte spell pane. | Stores the heap pointer in its inventory parent. |
 | `Darkages.exe:0x00446090` | `ui_point_init` | `void __cdecl(void *, int, int)` | Initialize an eight-byte client point. | Used for Pane relative origin. |
+| `Darkages.exe:0x004460B0` | `ui_rect_init` | `void __cdecl(void *, int, int, int, int)` | Initialize a client rectangle from left, top, right, and bottom. | Stores the four fields in top, left, bottom, right memory order. |
 | `Darkages.exe:0x0044E4D0` | `ui_hierarchy_list_ctor` | `void *__thiscall(void *list, int payload_size)` | Construct a packed hierarchy list. | Produces stride `payload_size + 0x0B`. |
 | `Darkages.exe:0x0044F4F0` | `ui_hierarchy_remove_node` | established `__thiscall` removal method | Remove one packed node and its child list. | Shared by Screen composition and event dispatch. |
 | `Darkages.exe:0x004594A0` | `ui_hierarchy_get_node` | `void *__thiscall(void *list, int index)` | Return a checked packed-node address. | Computes `array + index * stride`. |

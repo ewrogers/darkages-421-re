@@ -2,7 +2,7 @@
 
 The 4.21 client exposes enough stable process state to build a useful read-only UI inspector. Static module globals lead to the Screen composition tree, the Event receiver tree, and several important persistent panes. Heap pane objects share a common base layout, and their first pointer identifies the concrete implementation through a module-relative virtual-table address.
 
-This page is a runtime lookup reference. It describes addresses and fields confirmed by code paths that construct, read, update, or destroy them. The broader static global catalog is in [Data Map](data-map.md), and the complete pane-class discriminator list is in [Pane Virtual Table Inventory](ui-pane-vtables.md). [Event Proxy IPC, Rules, and State](../event-proxy/ipc-rules-and-state.md#runtime-state-and-memory-access) applies these paths to late-attach snapshots and guarded peek or poke requests.
+This page is a runtime lookup reference. It describes addresses and fields confirmed by code paths that construct, read, update, or destroy them. The broader static global catalog is in [Data Map](data-map.md), packed programmer-facing declarations are in [C Structure Layouts](c-structure-layouts.md), and the complete pane-class discriminator list is in [Pane Virtual Table Inventory](ui-pane-vtables.md). [Event Proxy IPC, Rules, and State](../event-proxy/ipc-rules-and-state.md#runtime-state-and-memory-access) applies these paths to late-attach snapshots and guarded peek or poke requests.
 
 ## High-level operation
 
@@ -28,8 +28,10 @@ Each address in the table is storage in the image. Read one 32-bit pointer from 
 | Static VA | RVA | Current IDA name | Heap object reached | Useful next step |
 |---:|---:|---|---|---|
 | `Darkages.exe:0x004E2D70` | `0x000E2D70` | `ui_bulletin_session` | Active BulletinSession | Read active child at session `+0x120`. |
+| `Darkages.exe:0x004E2E40` | `0x000E2E40` | `ui_lag_indicator_pane` | Persistent lag indicator pane | Read its smoothed movement round-trip value at `+0xF4`. |
 | `Darkages.exe:0x004E32A4` | `0x000E32A4` | `ui_equip_pane` | Persistent User Equip pane | Read visibility, equipment slots, self-look strings, and legend child pointers. |
 | `Darkages.exe:0x004E3564` | `0x000E3564` | `ui_users_dialog_pane` | Users Dialog Pane | Read visibility and its nine row/list objects. |
+| `Darkages.exe:0x004F5198` | `0x000F5198` | `ui_local_user` | Active local user object | Read movement timing at `+0x6F2C/+0x6F34`. |
 | `Darkages.exe:0x004F51AC` | `0x000F51AC` | `ui_main_menu_pane` | MainMenuPane | Distinguishes the main-menu phase. |
 | `Darkages.exe:0x004F51B0` | `0x000F51B0` | `ui_map_pane` | MapPane | Distinguishes the in-game phase and leads to map-owned state. |
 | `Darkages.exe:0x004F51B4` | `0x000F51B4` | `ui_background_pane` | BackgroundPane | Persistent parent of the in-game UI. |
@@ -97,6 +99,12 @@ The identifier is a native little-endian `uint16_t` in memory, even though the s
 `ui_bulletin_session` points to a specialized Pane with vtable RVA `0x00101E60`. Its current child pointer at `+0x120` leads to the active bulletin or mail dialog. Session `+0xF5` records its current child-history position and the one-byte field at `+0x124` records request-wait state.
 
 `ui_users_dialog_pane` is a Pane with a direct static root. It owns nine heap row/list objects at `+0x550` through `+0x570`. The dialog remains allocated and is reused by later `SShowUsers` replies, so `+0xB0` is the useful shown/hidden test.
+
+#### Read movement timing and the lag indicator
+
+Read `ui_local_user` while the game UI is active. Its latest queued `CMove` timestamp is a 32-bit `timeGetTime` value at `+0x6F2C`, and the latest `SMove` response sample is at `+0x6F34`. The persistent lag pane has its own direct root, `ui_lag_indicator_pane`, and stores the displayed smoothed value at pane `+0xF4`.
+
+The raw sample and displayed sample are intentionally different. On every accepted `SMove`, the pane replaces its value with `(old_value + latest_sample) / 2`. A reader that wants to reproduce the visible band should use the pane field. A reader that wants the latest unsmoothed movement response should use the local-user field.
 
 ### Peek versus poke
 
@@ -181,6 +189,7 @@ The following vtables are especially useful for state walking. The address to co
 | Class or role | Static VA | RVA | Current IDA name |
 |---|---:|---:|---|
 | BulletinSession | `Darkages.exe:0x00501E60` | `0x00101E60` | `ui_bulletin_session_vtable` |
+| Lag indicator pane | `Darkages.exe:0x00509C20` | `0x00109C20` | `ui_lag_indicator_pane_vtable` |
 | GameButtonsPane | `Darkages.exe:0x00510300` | `0x00110300` | `ui_game_buttons_pane_vtable` |
 | User Equip pane | `Darkages.exe:0x0050C6C0` | `0x0010C6C0` | `ui_equip_pane_vtable` |
 | Users Dialog Pane | `Darkages.exe:0x005106E0` | `0x001106E0` | `ui_users_dialog_pane_vtable` |
@@ -188,6 +197,41 @@ The following vtables are especially useful for state walking. The address to co
 | Spell inventory parent | `Darkages.exe:0x00510480` | `0x00110480` | `ui_spell_inventory_pane_vtable` |
 | Skill slot child | `Darkages.exe:0x00514820` | `0x00114820` | `ui_skill_slot_pane_vtable` |
 | Spell slot child | `Darkages.exe:0x00514880` | `0x00114880` | `ui_spell_slot_pane_vtable` |
+| `NewUser` local-user pane | `Darkages.exe:0x0051E980` | `0x0011E980` | `ui_local_user_vtable` |
+
+### Lag indicator and movement timing
+
+The lag indicator is a `0xF8`-byte Pane created with the rest of the in-game pane graph. Its constructor publishes `ui_lag_indicator_pane`, initializes `+0xF4` to 300 milliseconds, sets a 32 by 32 local bound, and adds and registers the pane below `BackgroundPane`. The attach method passes `left = 537`, `top = 314`, `right = 549`, and `bottom = 328` to `ui_rect_init`. The helper stores the client-order words `(top = 314, left = 537, bottom = 328, right = 549)`, placing the visible indicator at `x = 537..549`, `y = 314..328`.
+
+The value is not based on socket throughput, receive queue depth, or a periodic ping packet. `net_c_send_move` builds `CMove` action `0x06`, increments the one-byte movement sequence at local user `+0x6F28`, and stores `timeGetTime` at `+0x6F2C`. When the local user receives `SMove` action `0x0B`, `ui_local_user_handle_smove` stores the unsigned difference between the new clock sample and `+0x6F2C` at `+0x6F34`. It then calls `ui_lag_indicator_update_from_local_user`, which averages the new sample with pane `+0xF4` and invalidates the pane rectangle.
+
+```c
+uint32_t latest_sample = current_tick - last_move_send_tick;
+uint32_t displayed_sample =
+    (previous_displayed_sample + latest_sample) / 2;
+```
+
+The sender keeps only one timestamp. If another `CMove` is queued before an earlier `SMove` arrives, the newer send overwrites `+0x6F2C`. The packet byte read at decoded-packet offset `+0x0A` is also discarded rather than compared against the client movement sequence. The indicator is therefore a smoothed response time relative to the most recent move timestamp, not a rigorous per-sequence network RTT measurement.
+
+`ui_lag_indicator_pane_draw` selects `statcon.epf` frames with unsigned comparisons:
+
+| Smoothed value at pane `+0xF4` | Frame | Visual color in the checked version-family asset | Notes |
+|---:|---:|---|---|
+| `0` | 2 | Green | Zero bypasses the 1 through 249 fast band. Normal construction starts at 300, not zero. |
+| `1` through `249` | 3 | Blue | Fastest band. |
+| `250` through `349` | 2 | Green | Constructor default 300 starts here. |
+| `350` through `449` | 1 | Orange | Intermediate warning band. |
+| `450` or more | 0 | Red | Slowest band. |
+
+The frame numbers and thresholds come directly from the 4.21 draw code. The color labels were checked by decoding the same-named `statcon.epf` against `legend.pal` from an available 4.51 data set: frame 3 is blue, frame 2 green, frame 1 orange, and frame 0 red. Exact 4.21 asset identity was not available in this workspace, so tools that require byte-identical 4.21 colors should verify those four asset frames while retaining the code-established frame mapping.
+
+| Object offset | Width | Meaning |
+|---:|---:|---|
+| lag pane `+0x00F4` | 4 | Unsigned smoothed movement response value used for frame selection. |
+| local user `+0x6F28` | 1 | Incrementing `CMove` sequence byte. |
+| local user `+0x6F29` | 1 | Current movement sequence copied when an `SMove` is handled. It is not populated from the packet byte read at `+0x0A`. |
+| local user `+0x6F2C` | 4 | `timeGetTime` value from the most recently queued `CMove`. |
+| local user `+0x6F34` | 4 | Latest unsmoothed `SMove` minus latest-`CMove` clock difference. |
 
 See [Pane Virtual Table Inventory](ui-pane-vtables.md) for dialogs, bulletin and mail panes, controls, MapPane, options, books, effects, and the remaining compatible tables.
 
@@ -333,6 +377,12 @@ Do not cast the remote `0x3F`- or `0x0F`-byte nodes to an ordinary local C struc
 |---:|---|---|---|---|
 | `Darkages.exe:0x0040E660` | `ui_bulletin_session_deleting_dtor` | established `__thiscall` deleting destructor | Destroy the active BulletinSession and its child history. | Clears `ui_bulletin_session` and unregisters and removes the Pane. |
 | `Darkages.exe:0x0040EB10` | `ui_bulletin_session_ctor` | `void *__thiscall(void *, int, const uint8_t *)` | Construct and publish a `0x12C`-byte BulletinSession Pane. | Initializes the ten-entry history and one-byte request-wait field. |
+| `Darkages.exe:0x00423984` | `ui_lag_indicator_pane_dtor` | `void __thiscall(struct ui_lag_indicator_pane *)` | Destroy the lag indicator Pane. | Clears `ui_lag_indicator_pane` before base Pane cleanup. |
+| `Darkages.exe:0x004239C0` | `ui_get_lag_indicator_pane` | `struct ui_lag_indicator_pane *__cdecl(void)` | Return the persistent lag indicator pointer. | Used by the SMove timing path and game-pane teardown. |
+| `Darkages.exe:0x004239D0` | `ui_lag_indicator_pane_ctor` | `struct ui_lag_indicator_pane *__thiscall(struct ui_lag_indicator_pane *, void *)` | Construct and publish the `0xF8`-byte lag indicator Pane. | Initializes the displayed value to 300 and calls the attach method. |
+| `Darkages.exe:0x00423A44` | `ui_lag_indicator_pane_attach` | `void __thiscall(struct ui_lag_indicator_pane *, void *)` | Add and register the lag indicator below BackgroundPane. | Uses left/top/right/bottom arguments `(537, 314, 549, 328)`. |
+| `Darkages.exe:0x00423AA0` | `ui_lag_indicator_pane_draw` | `void __thiscall(struct ui_lag_indicator_pane *)` | Select and draw a `statcon.epf` frame. | Vtable slot `+0x48`; applies the five value bands documented above. |
+| `Darkages.exe:0x00423B60` | `ui_lag_indicator_update_from_local_user` | `void __thiscall(struct ui_lag_indicator_pane *)` | Average the latest local-user timing sample into the displayed value. | Reads local user `+0x6F34`, writes pane `+0xF4`, and invalidates the Pane. |
 | `Darkages.exe:0x00431150` | `event_dispatcher_register_pane` | `void __thiscall(void *, void *, int, int)` | Insert a pane into the Event hierarchy. | Event list is reached at dispatcher `+0x68`. |
 | `Darkages.exe:0x0043A5F0` | `ui_game_buttons_pane_ctor` | `void *__thiscall(void *, void *, void *)` | Construct GameButtonsPane and its persistent content graph. | Installs `ui_game_buttons_pane_vtable`. |
 | `Darkages.exe:0x0043CF20` | `ui_game_buttons_handle_key_event` | `int __thiscall(void *, void *)` | Select equipment, skills, spells, chat, or status. | Writes button state and calls `ui_game_buttons_select_content`. |
@@ -343,6 +393,7 @@ Do not cast the remote `0x3F`- or `0x0F`-byte nodes to an ordinary local C struc
 | `Darkages.exe:0x00443E14` | `ui_spell_inventory_remove_slot_pane` | `void __thiscall(void *, uint8_t)` | Remove and delete one spell slot pane. | Clears one pointer at parent `+0xF4`. |
 | `Darkages.exe:0x00443F24` | `ui_spell_inventory_create_slot_pane` | `void __thiscall(void *, uint8_t, uint16_t, int8_t, const char *, const char *, uint8_t)` | Allocate and register one spell slot pane. | Object size `0x214`. |
 | `Darkages.exe:0x00446090` | `ui_point_init` | `void __cdecl(void *, int, int)` | Initialize an eight-byte client point. | Used for Pane relative-origin fields. |
+| `Darkages.exe:0x004460B0` | `ui_rect_init` | `void __cdecl(void *, int, int, int, int)` | Initialize a client rectangle from left, top, right, and bottom. | Stores fields in top, left, bottom, right memory order. |
 | `Darkages.exe:0x0044E4D0` | `ui_hierarchy_list_ctor` | `void *__thiscall(void *, int)` | Construct a packed hierarchy list. | Node stride is payload size plus `0x0B`. |
 | `Darkages.exe:0x00454CA0` | `ui_skill_slot_finish_cooldown` | established `__thiscall` method | Clear a skill slot's cooldown-active byte. | Called by the parent inventory timer path. |
 | `Darkages.exe:0x00454CC0` | `ui_skill_slot_start_cooldown` | established `__thiscall` method | Set a skill slot's cooldown-active byte. | Reached from `SCooldown` processing. |
@@ -351,6 +402,12 @@ Do not cast the remote `0x3F`- or `0x0F`-byte nodes to an ordinary local C struc
 | `Darkages.exe:0x00456B90` | `ui_skill_slot_pane_ctor` | `void *__thiscall(void *, uint8_t, uint16_t, const char *)` | Initialize a skill slot's persistent fields. | Installs `ui_skill_slot_pane_vtable`. |
 | `Darkages.exe:0x00456C70` | `ui_spell_slot_pane_ctor` | `void *__thiscall(void *, uint8_t, uint16_t, int8_t, const char *, const char *, uint8_t)` | Initialize a spell slot's persistent fields. | Installs `ui_spell_slot_pane_vtable`. |
 | `Darkages.exe:0x004594A0` | `ui_hierarchy_get_node` | `void *__thiscall(void *, int)` | Return `array + index * stride` after bounds checks. | Confirms unaligned packed-node addressing. |
+| `Darkages.exe:0x004876C4` | `ui_local_user_dtor` | `void __thiscall(struct ui_local_user *)` | Destroy the local-user Pane and owned state. | Clears `ui_local_user_singleton`; the game-pane teardown path clears the owning `ui_local_user` root. |
+| `Darkages.exe:0x00487700` | `ui_local_user_ctor` | `struct ui_local_user *__thiscall(struct ui_local_user *, void *)` | Construct and publish the `0x776C`-byte local-user Pane. | Initializes the movement sequence and timing fields. |
+| `Darkages.exe:0x00487860` | `ui_get_local_user` | `struct ui_local_user *__cdecl(void)` | Return the active local-user pointer. | Supplies the raw timing sample to the lag indicator update. |
+| `Darkages.exe:0x004884E4` | `net_c_send_move` | `void __thiscall(struct ui_local_user *, uint8_t)` | Build and queue CMove while starting its timing sample. | Increments `+0x6F28` and overwrites `+0x6F2C`. |
+| `Darkages.exe:0x004889F0` | `ui_local_user_handle_server_packet` | `int __thiscall(struct ui_local_user *, void *)` | Dispatch local-user server actions. | Routes action `0x0B` to `ui_local_user_handle_smove`. |
+| `Darkages.exe:0x004897C4` | `ui_local_user_handle_smove` | `int __thiscall(struct ui_local_user *, const uint8_t *)` | Parse SMove, record a raw timing sample, and process movement acknowledgment or correction. | Calls the lag indicator update after `timeGetTime - last_move_send_tick`. |
 | `Darkages.exe:0x00493240` | `ui_pane_get_bound_rect` | `void __thiscall(void *, int32_t *)` | Return Pane bounds translated by its relative origin. | Reads local rectangle `+0x38` and point `+0xA8`. |
 | `Darkages.exe:0x004932B0` | `ui_pane_set_bound_rect` | `void __thiscall(void *, const int32_t *)` | Split input bounds into relative origin and local rectangle. | Vtable slot `+0x24`; called during Screen insertion. |
 | `Darkages.exe:0x00498F40` | `ui_screen_add_pane` | established `__thiscall` add method | Insert a pane and `0x34`-byte payload into Screen. | Copies visibility and pane flags into the node. |

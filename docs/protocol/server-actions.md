@@ -14,23 +14,23 @@ All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x4
 | `0x01` | [`SNewUserCheck`](server/001-01-new-user-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`. Used during login or lobby. |
 | `0x02` | [`SLoginCheck`](server/002-02-login-check.md) | Yes | `Darkages.exe:0x00461080` `sub_461080`, `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`, `Darkages.exe:0x00464300` `sub_464300`, `Darkages.exe:0x00463A60` `sub_463A60`. Used during login or lobby. |
 | `0x03` | [`STransferServer`](server/003-03-transfer-server.md) | No | `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet` and `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. The `MapPane` branch calls transfer-server processing and can send `kClientTransferServer`. XOR bypass. |
-| `0x04` | [`SUserPosition`](server/004-04-user-position.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
-| `0x05` | [`SUserAppearance`](server/005-05-user-appearance.md) | Yes | `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x04` | [`SUserPosition`](server/004-04-user-position.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
+| `0x05` | [`SUserAppearance`](server/005-05-user-appearance.md) | Yes | `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
 | `0x06` | [`SMap`](server/006-06-map.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x07` | [`SDrawObjects`](server/007-07-draw-objects.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x08` | [`SStatus`](server/008-08-status.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`, `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`, `Darkages.exe:0x004927F0` `sub_4927F0`, `Darkages.exe:0x00494C60` `sub_494C60`. |
+| `0x08` | [`SStatus`](server/008-08-status.md) | Yes | `Darkages.exe:0x0043F420` `sub_43F420`, `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`, `Darkages.exe:0x004927F0` `sub_4927F0`, `Darkages.exe:0x00494C60` `sub_494C60`. |
 | `0x0A` | [`SMessage`](server/010-0a-message.md) | Yes | `Darkages.exe:0x0041CCA0` `sub_41CCA0`, `Darkages.exe:0x00444690` `sub_444690`, `Darkages.exe:0x0045F780` `ui_main_menu_handle_server_packet`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, `Darkages.exe:0x00491520` `sub_491520`. |
-| `0x0B` | [`SMove`](server/011-0b-move.md) | Yes | `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x0B` | [`SMove`](server/011-0b-move.md) | Yes | `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
 | `0x0C` | [`SMoveObject`](server/012-0c-move-object.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x0D` | [`SSay`](server/013-0d-say.md) | Yes | `Darkages.exe:0x0041CCA0` `sub_41CCA0`, `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x0E` | [`SRemoveObjects`](server/014-0e-remove-objects.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. The mapped branch removes an object from map state. |
-| `0x0F` | [`SAddItem`](server/015-0f-add-item.md) | Yes | `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
-| `0x10` | [`SRemoveItem`](server/016-10-remove-item.md) | Yes | `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x0F` | [`SAddItem`](server/015-0f-add-item.md) | Yes | `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
+| `0x10` | [`SRemoveItem`](server/016-10-remove-item.md) | Yes | `Darkages.exe:0x00441850` `sub_441850`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
 | `0x11` | [`SChangeDirection`](server/017-11-change-direction.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, which calls `Darkages.exe:0x0046B574` `ui_map_handle_object_direction`. Offset `0x01` is a big-endian object ID and offset `0x05` is a direction value from 0 through 3. |
 | `0x13` | [`SDamageEffect`](server/019-13-damage-effect.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x15` | [`SMapInfo`](server/021-15-map-info.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
-| `0x17` | [`SAddSpell`](server/023-17-add-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
-| `0x18` | [`SRemoveSpell`](server/024-18-remove-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x17` | [`SAddSpell`](server/023-17-add-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
+| `0x18` | [`SRemoveSpell`](server/024-18-remove-spell.md) | Yes | `Darkages.exe:0x00443B10` `ui_spell_inventory_handle_server_packet`, `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
 | `0x19` | [`SSoundEffect`](server/025-19-sound-effect.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x1A` | [`SMotion`](server/026-1a-motion.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. |
 | `0x1B` | [`SEnterEditingMode`](server/027-1b-enter-editing-mode.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`. Used for paper editing. |
@@ -67,7 +67,7 @@ All entries use the server-to-client direction. Actions `0x00`, `0x03`, and `0x4
 | `0x49` | [`SRequestPortrait`](server/073-49-request-portrait.md) | Yes | `Darkages.exe:0x0040B3A0` `ui_handle_server_request_portrait`. An embedded diagnostic names `kServerRequestPortrait` and states decimal value 73. The handler initiates client action `0x4F`. |
 | `0x4B` | [`SBounce`](server/075-4b-bounce.md) | Yes | `Darkages.exe:0x00468A90` `ui_map_dispatch_server_packet`, which calls `Darkages.exe:0x0046CA54` `net_forward_embedded_client_packet`. Offset `0x01` is a big-endian embedded length and offset `0x03` begins the logical client packet. |
 | `0x4C` | [`SReconnect`](server/076-4c-reconnect.md) | Yes | `Darkages.exe:0x004921F0` `ui_exit_wait_handle_server_packet`. The Stone handler consumes all `0x4C` packets. Subtype `0x01` sends `CQuit` subtype `0x00` and changes an exit-wait pane to the safe-exit message; it does not call the Socket reconnect path. |
-| `0x51` | [`SBlockInput`](server/081-51-block-input.md) | Yes | `Darkages.exe:0x004889F0` `sub_4889F0`. |
+| `0x51` | [`SBlockInput`](server/081-51-block-input.md) | Yes | `Darkages.exe:0x004889F0` `ui_local_user_handle_server_packet`. |
 | `0x56` | [`SMulti`](server/086-56-multi.md) | Yes | `Darkages.exe:0x004A2ED0` `ui_server_select_handle_server_packet`. `ServerSelectDialogPane` reads a count, allocates replacement entry storage, and deserializes fixed-width integers and colon-delimited strings before loading the table. |
 
 ## `MapPane` switch coverage
