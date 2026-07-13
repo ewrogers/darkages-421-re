@@ -2,15 +2,45 @@
 
 This appendix is a cross-subsystem index of important functions, grouped by primary subsystem. Cross-subsystem functions appear under the subsystem that owns their main control flow. Detailed decisions belong in the relevant subsystem chapter. An address remains the durable identifier when a name improves later.
 
+## Application lifecycle
+
+| Address | Current IDA name | Subsystem | Prototype | Purpose | Detailed page |
+|---:|---|---|---|---|---|
+| `Darkages.exe:0x0041D390` | `app_check_conflicting_software` | Application | `int __cdecl(void)` | Prompt for four process suffixes and two files before startup. | [Startup and Shutdown](../lifecycle/startup.md#preflight-checks-and-single-instance-enforcement) |
+| `Darkages.exe:0x0041D690` | `win_top_level_window_exists` | Win32 | `BOOL __cdecl(LPCSTR class_name, LPCSTR window_title)` | Test for a matching top-level window. | [Startup and Shutdown](../lifecycle/startup.md#preflight-checks-and-single-instance-enforcement) |
+| `Darkages.exe:0x0041D6C0` | `app_check_runservices_entries` | Application | `int __cdecl(void)` | Examine and optionally delete three `RunServices` values. | [Startup and Shutdown](../lifecycle/startup.md#preflight-checks-and-single-instance-enforcement) |
+| `Darkages.exe:0x0045B5F0` | `app_win_main` | Application and Win32 | `int __stdcall(HINSTANCE, HINSTANCE, LPSTR, int)` | Own class registration, checks, window creation, the message loop, and normal shutdown. | [Startup and Shutdown](../lifecycle/startup.md) |
+| `Darkages.exe:0x0045B8F0` | `app_shutdown` | Application | `void __cdecl(void)` | Delete the initialized subsystem graph in fixed order. | [Startup and Shutdown](../lifecycle/startup.md#normal-and-abnormal-shutdown) |
+| `Darkages.exe:0x0045C840` | `app_set_working_directory_from_command_line` | Application | `void __cdecl(void)` | Parse the executable directory from the raw command line and make it current. | [Startup and Shutdown](../lifecycle/startup.md#command-line-directory-parsing) |
+| `Darkages.exe:0x0045CCA0` | `app_initialize` | Application | `void __cdecl(void)` | Construct resources, services, screen state, and event workers. | [Startup and Shutdown](../lifecycle/startup.md#subsystem-initialization) |
+| `Darkages.exe:0x0049D790` | `ui_screen_pane_activate` | UI and Win32 | `void __thiscall(void *screen_pane)` | Restore active screen and presentation state. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) |
+| `Darkages.exe:0x004C62A5` | `app_crt_entry` | Application and CRT | `void __cdecl(void)` | Initialize the Microsoft C runtime and call `app_win_main`. | [Startup and Shutdown](../lifecycle/startup.md#crt-handoff) |
+
 ## Events
 
 | Address | Current IDA name | Subsystem | Prototype | Purpose | Detailed page |
 |---:|---|---|---|---|---|
-| `Darkages.exe:0x00431B84` | `event_dispatch` | Events | `int __thiscall(void *this, void *event)` | Dispatch one internal Event. | [Networking](../subsystems/networking.md#receive-and-event-routing) |
-| `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | Events | `int __thiscall(void *this, void *event, void *hierarchy)` | Walk panes and call the type-specific virtual handler. | [Networking](../subsystems/networking.md#receive-and-event-routing) |
-| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | Events and network | `void __thiscall(void *this, const uint8_t *packet, int length)` | Copy decoded packet bytes to work code `0x0E`. | [Networking](../subsystems/networking.md#receive-and-event-routing) |
-| `Darkages.exe:0x00433110` | `event_process_work_item` | Events | `void __thiscall(void *this, int code, void *data, int value)` | Convert worker records to Event objects. | [Networking](../subsystems/networking.md#receive-and-event-routing) |
-| `Darkages.exe:0x00433DC4` | `event_queue_socket_packet` | Events and network | `void __stdcall(uint8_t *packet, uint32_t size)` | Queue Event type 9 with packet ownership. | [Networking](../subsystems/networking.md#receive-and-event-routing) |
+| `Darkages.exe:0x0040E4D0` | `event_deferred_delete_queue_ctor` | Events | `void *__thiscall(void *queue_object)` | Construct the deferred-deletion queue. | [Internal Event Routing](../subsystems/internal-events.md#periodic-tick-and-deferred-deletion) |
+| `Darkages.exe:0x0040E5C0` | `event_deferred_delete_queue_drain` | Events | `void __thiscall(void *queue_object)` | Delete and remove every deferred object. | [Internal Event Routing](../subsystems/internal-events.md#periodic-tick-and-deferred-deletion) |
+| `Darkages.exe:0x00430F84` | `event_dispatcher_dtor` | Events and timing | `void __thiscall(void *event_dispatcher_object)` | Release dispatcher containers and balance multimedia timing state. | [Internal Event Routing](../subsystems/internal-events.md#shutdown-and-ownership) |
+| `Darkages.exe:0x00430FE0` | `event_dispatcher_ctor` | Events and timing | `void *__thiscall(void *event_dispatcher_object)` | Construct the dispatcher, timer list, and worker timing state. | [Internal Event Routing](../subsystems/internal-events.md#worker-and-timer-lifecycle) |
+| `Darkages.exe:0x00431150` | `event_dispatcher_register_pane` | Events | `void __thiscall(void *event_dispatcher_object, void *pane, int hierarchy, int position)` | Register a pane and hierarchy metadata. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) |
+| `Darkages.exe:0x004311B0` | `event_dispatcher_unregister_pane` | Events | `void __thiscall(void *event_dispatcher_object, void *pane)` | Remove a pane from dispatcher traversal. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) |
+| `Darkages.exe:0x00431320` | `event_dispatcher_insert_timer` | Events and timing | `void __thiscall(void *event_dispatcher_object, void *receiver, int callback_id, unsigned int delay_ms, int payload_0, int payload_1)` | Insert a timer into the absolute-deadline sorted list. | [Internal Event Routing](../subsystems/internal-events.md#timer-records-and-scheduling) |
+| `Darkages.exe:0x00431470` | `event_dispatcher_remove_pane_timers` | Events and timing | `void __thiscall(void *event_dispatcher_object, void *receiver)` | Cancel every timer for one pane. | [Internal Event Routing](../subsystems/internal-events.md#timer-records-and-scheduling) |
+| `Darkages.exe:0x004315B0` | `event_dispatcher_tick` | Events and timing | `void __thiscall(void *event_dispatcher_object)` | Drain deferred deletion and dispatch at most one due timer. | [Internal Event Routing](../subsystems/internal-events.md#periodic-tick-and-deferred-deletion) |
+| `Darkages.exe:0x004316E0` | `event_dispatcher_process_work_item` | Events | `void __thiscall(void *event_dispatcher_object, int code, void *data, int value)` | Execute dispatcher work codes, including timer insert and cancellation. | [Internal Event Routing](../subsystems/internal-events.md#timer-insertion-and-callback) |
+| `Darkages.exe:0x00431B84` | `event_dispatch` | Events | `int __thiscall(void *this, void *event)` | Dispatch one internal Event. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) |
+| `Darkages.exe:0x00431D54` | `event_dispatch_hierarchy` | Events | `int __thiscall(void *this, void *event, void *hierarchy)` | Walk panes and call the type-specific virtual handler. | [Internal Event Routing](../subsystems/internal-events.md#dispatcher-event-manager-and-pane-hierarchy) |
+| `Darkages.exe:0x00432630` | `event_manager_ctor` | Events and network | `void *__thiscall(void *event_manager_object)` | Construct and publish the EventMan singleton. | [Internal Event Routing](../subsystems/internal-events.md#construction-and-start) |
+| `Darkages.exe:0x00432E50` | `event_post_socket_bytes` | Events and network | `void __thiscall(void *this, const uint8_t *packet, int length)` | Copy decoded packet bytes to work code `0x0E`. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) |
+| `Darkages.exe:0x00433110` | `event_process_work_item` | Events | `void __thiscall(void *this, int code, void *data, int value)` | Convert event-manager worker records to Event objects. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) |
+| `Darkages.exe:0x00433DC4` | `event_queue_socket_packet` | Events and network | `void __stdcall(uint8_t *packet, uint32_t size)` | Queue Event type 9 with packet ownership. | [Internal Event Routing](../subsystems/internal-events.md#network-event-handoff) |
+| `Darkages.exe:0x004BE9B0` | `util_thread_queue_ctor` | Cross-subsystem worker | `void *__thiscall(void *worker_object, int queue_capacity)` | Construct queue state and a suspended worker thread. | [Internal Event Routing](../subsystems/internal-events.md#construction-and-start) |
+| `Darkages.exe:0x004BECB0` | `util_thread_queue_dtor` | Cross-subsystem worker | `void __thiscall(void *worker_object)` | Terminate the worker and release its handles and queues. | [Internal Event Routing](../subsystems/internal-events.md#shutdown-and-ownership) |
+| `Darkages.exe:0x004BEDF0` | `util_thread_queue_set_wait_timeout` | Cross-subsystem worker | `void __thiscall(void *worker_object, unsigned int timeout_ms)` | Set the `WaitForMultipleObjects` timeout. | [Internal Event Routing](../subsystems/internal-events.md#worker-and-timer-lifecycle) |
+| `Darkages.exe:0x004BEE00` | `util_thread_queue_start` | Cross-subsystem worker | `void __thiscall(void *worker_object)` | Create the derived wait object and resume the worker. | [Internal Event Routing](../subsystems/internal-events.md#construction-and-start) |
+| `Darkages.exe:0x004BF250` | `util_thread_queue_worker_loop` | Cross-subsystem worker | `void __thiscall(void *worker_object)` | Wait for work or timeout and invoke derived worker methods. | [Internal Event Routing](../subsystems/internal-events.md#worker-loop) |
 
 ## Networking
 
@@ -48,7 +78,7 @@ This appendix is a cross-subsystem index of important functions, grouped by prim
 
 | Address | Current IDA name | Subsystem | Prototype | Purpose | Detailed page |
 |---:|---|---|---|---|---|
-| `Darkages.exe:0x0045BDC0` | `win_main_window_proc` | Win32 and network | `LRESULT __stdcall(HWND, UINT, WPARAM, LPARAM)` | Route `WM_USER + 2` Winsock notifications. | [Networking](../subsystems/networking.md#connection-and-windows-notification) |
+| `Darkages.exe:0x0045BDC0` | `win_main_window_proc` | Win32, UI, and network | `LRESULT __stdcall(HWND, UINT, WPARAM, LPARAM)` | Route activation, destruction, input, palette, Winsock, and client-specific messages. | [Startup and Shutdown](../lifecycle/startup.md#message-pump-and-activation) |
 
 ## Entry requirements
 
