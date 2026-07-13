@@ -150,5 +150,6 @@
 - [Analyzed Binary](appendices/binary-identity.md)
 - [Function Map](appendices/function-map.md)
 - [Data Map](appendices/data-map.md)
+- [Runtime UI Memory Map](appendices/runtime-ui-memory-map.md)
 - [Pane Virtual Table Inventory](appendices/ui-pane-vtables.md)
 - [Glossary](appendices/glossary.md)

@@ -31,6 +31,6 @@ Payload offsets begin with the first byte after the action. The frame marker, fr
 
 ## UI behavior
 
-`ui_equip_pane_add_item` stores the identifier in the two-byte slot array beginning at pane `+0xB22` and the name in `0x80`-byte records beginning at `+0xB3E`, then redraws. It does not show the equipment pane.
+`ui_equip_pane_add_item` accepts normal slots 1 through 13. It stores the identifier at pane `+0xB22 + 2 * slot` and the name at `+0xB3E + 0x80 * (slot - 1)`, then redraws. The identifier is native little-endian in memory after the packet's big-endian value is decoded. This action does not show the equipment pane.
 
-See [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#equipment-and-self-look).
+See [Runtime UI Memory Map](../../appendices/runtime-ui-memory-map.md#equipment-and-self-look-fields) and [UI, Input, and Packet Flows](../../architecture/ui-network-flows.md#equipment-and-self-look).

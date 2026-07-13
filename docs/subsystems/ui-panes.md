@@ -74,6 +74,8 @@ The documented virtual addresses use image base `0x00400000`. A runtime tool tha
 
 These roots are useful object discriminators as well as pointer chains. A live object begins with its current virtual-table pointer. Comparing that pointer against the [vtable inventory](../appendices/ui-pane-vtables.md) identifies compatible panes without relying on absent RTTI.
 
+The [Runtime UI Memory Map](../appendices/runtime-ui-memory-map.md) turns these roots into concrete Screen and Event tree-walking recipes and records confirmed fields for GameButtonsPane, equipment and self-look state, skill and spell slots, BulletinSession, and Users Dialog Pane.
+
 External readers can race Screen changes, event registration, and deferred deletion. The Screen add and remove paths do not acquire a visible lock around the packed list. A practical snapshot should read the list pointer, count, array pointer, and stride, copy the nodes, then re-read those four values and discard the snapshot if they changed. Each pane pointer should also be checked for readability and a known vtable before reading fields. Writes are more hazardous because pane fields, both registries, timers, and ownership must remain consistent.
 
 ## Code-level flow
@@ -86,7 +88,8 @@ External readers can race Screen changes, event registration, and deferred delet
 |---:|---:|---|
 | `+0x0000` | 4 | Current virtual-table pointer. |
 | `+0x0008` | 4 | Last propagated Screen or dispatcher error. |
-| `+0x00A8` | 16 | Pane bounds `RECT`. |
+| `+0x0038` | 16 | Local graphic bound rectangle in client order: top, left, bottom, right. |
+| `+0x00A8` | 8 | Relative origin point: signed top at `+0xA8` and left at `+0xAC`. |
 | `+0x00B0` | 1 | Visible or active state; set by `ui_pane_show`, cleared by `ui_pane_hide`, and queried by `ui_pane_is_visible`. |
 | `+0x00B1` | 1 | Constructor flag copied from the first stack argument; exact meaning is not yet established. |
 | `+0x00B2` | 1 | Constructor flag copied from the second stack argument; exact meaning is not yet established. |
@@ -238,7 +241,7 @@ The common add path is:
 3. `ui_screen_add_pane` validates bounds, resolves optional parent and front panes with `ui_screen_find_pane_node`, copies the Screen payload, and inserts the packed node.
 4. The owner calls vslot `+0x30`, reaching `ui_pane_register_events` and `event_dispatcher_register_pane`.
 
-Removal reverses both memberships before destruction. `ui_pane_remove_from_screen` releases capture-related state when necessary and calls `ui_screen_remove_pane`. Event removal reaches `event_dispatcher_unregister_pane`. Representative dynamic paths are `ui_game_buttons_remove_skill_pane`, `ui_game_buttons_remove_spell_pane`, the server-select destructor, and `ui_text_edit_handle_key_event`.
+Removal reverses both memberships before destruction. `ui_pane_remove_from_screen` releases capture-related state when necessary and calls `ui_screen_remove_pane`. Event removal reaches `event_dispatcher_unregister_pane`. Representative dynamic paths are `ui_skill_inventory_remove_slot_pane`, `ui_spell_inventory_remove_slot_pane`, the server-select destructor, and `ui_text_edit_handle_key_event`.
 
 `ui_screen_find_pane_node` recursively returns the containing list and node index. `ui_screen_get_pane_origin` walks parent links to accumulate screen coordinates. These functions make the Screen hierarchy useful for both rendering and runtime inspection.
 
@@ -269,10 +272,11 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x004325F0` | `event_is_keyboard` | `int __thiscall(void *event)` | Test Event type 8. | Used by `event_dispatch_hierarchy`. |
 | `Darkages.exe:0x0042A190` | `ui_dialog_handle_mouse_event` | `int __thiscall(void *, void *)` | Process generic Dialog mouse input. | Explicit cases are `0`, `1`, `2`, `3`, `4`, and `7`. |
 | `Darkages.exe:0x0042AED0` | `ui_dialog_handle_key_event` | `int __thiscall(void *, void *)` | Process generic Dialog key input and forward to the focused control. | Handles Event type `8` only. |
-| `Darkages.exe:0x00442C04` | `ui_game_buttons_remove_skill_pane` | established `__thiscall` removal method | Remove, unregister, delete, and clear an indexed skill pane. | Counterpart to `ui_game_buttons_create_skill_pane`. |
-| `Darkages.exe:0x00442D14` | `ui_game_buttons_create_skill_pane` | established `__thiscall` creation method | Allocate and register an indexed `0x294`-byte skill pane. | Stores the heap pointer in its owner. |
-| `Darkages.exe:0x00443E14` | `ui_game_buttons_remove_spell_pane` | established `__thiscall` removal method | Remove, unregister, delete, and clear an indexed spell pane. | Counterpart to `ui_game_buttons_create_spell_pane`. |
-| `Darkages.exe:0x00443F24` | `ui_game_buttons_create_spell_pane` | established `__thiscall` creation method | Allocate and register an indexed `0x214`-byte spell pane. | Stores the heap pointer in its owner. |
+| `Darkages.exe:0x00442C04` | `ui_skill_inventory_remove_slot_pane` | `void __thiscall(void *, uint8_t)` | Remove, unregister, delete, and clear an indexed skill pane. | Counterpart to `ui_skill_inventory_create_slot_pane`. |
+| `Darkages.exe:0x00442D14` | `ui_skill_inventory_create_slot_pane` | `void __thiscall(void *, uint8_t, uint16_t, const char *)` | Allocate and register an indexed `0x294`-byte skill pane. | Stores the heap pointer in its inventory parent. |
+| `Darkages.exe:0x00443E14` | `ui_spell_inventory_remove_slot_pane` | `void __thiscall(void *, uint8_t)` | Remove, unregister, delete, and clear an indexed spell pane. | Counterpart to `ui_spell_inventory_create_slot_pane`. |
+| `Darkages.exe:0x00443F24` | `ui_spell_inventory_create_slot_pane` | `void __thiscall(void *, uint8_t, uint16_t, int8_t, const char *, const char *, uint8_t)` | Allocate and register an indexed `0x214`-byte spell pane. | Stores the heap pointer in its inventory parent. |
+| `Darkages.exe:0x00446090` | `ui_point_init` | `void __cdecl(void *, int, int)` | Initialize an eight-byte client point. | Used for Pane relative origin. |
 | `Darkages.exe:0x0044E4D0` | `ui_hierarchy_list_ctor` | `void *__thiscall(void *list, int payload_size)` | Construct a packed hierarchy list. | Produces stride `payload_size + 0x0B`. |
 | `Darkages.exe:0x0044F4F0` | `ui_hierarchy_remove_node` | established `__thiscall` removal method | Remove one packed node and its child list. | Shared by Screen composition and event dispatch. |
 | `Darkages.exe:0x004594A0` | `ui_hierarchy_get_node` | `void *__thiscall(void *list, int index)` | Return a checked packed-node address. | Computes `array + index * stride`. |
@@ -286,6 +290,8 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x00490A80` | `ui_option_pane_handle_mouse_event` | `int __thiscall(void *, void *)` | Process OptionPane mouse state. | Delegates common behavior to Dialog. |
 | `Darkages.exe:0x00490D70` | `ui_option_pane_handle_timer` | `int __thiscall(void *, int, int, int)` | Advance OptionPane timer state. | Handles callback 100 separately. |
 | `Darkages.exe:0x00490FE0` | `ui_option_pane_handle_key_event` | `int __thiscall(void *, void *)` | Process OptionPane shortcuts. | X constructs the exit-wait pane. |
+| `Darkages.exe:0x00493240` | `ui_pane_get_bound_rect` | `void __thiscall(void *, int32_t *)` | Return the local graphic rectangle translated by Pane origin. | Reads `+0x38` and `+0xA8`. |
+| `Darkages.exe:0x004932B0` | `ui_pane_set_bound_rect` | `void __thiscall(void *, const int32_t *)` | Store relative origin and apply a translated local rectangle. | Vtable slot `+0x24`; Screen add calls it. |
 | `Darkages.exe:0x00498F20` | `ui_screen_registry_ctor` | `void *__thiscall(void *registry)` | Construct the Screen composition registry. | Requests a `0x34`-byte hierarchy payload. |
 | `Darkages.exe:0x00498F40` | `ui_screen_add_pane` | established `__thiscall` add method | Validate and insert a Screen pane node. | Called by `ui_pane_add_to_screen`. |
 | `Darkages.exe:0x004993C4` | `ui_screen_find_pane_node` | established recursive `__thiscall` search | Find a pane and optionally return its list and index. | Used for parent, sibling, removal, and coordinate queries. |
@@ -298,7 +304,7 @@ Removal reverses both memberships before destruction. `ui_pane_remove_from_scree
 | `Darkages.exe:0x00492C10` | `ui_pane_is_visible` | `int __thiscall(void *pane)` | Query common Pane visibility. | Used by the equipment same-pane toggle. |
 | `Darkages.exe:0x00492C40` | `ui_pane_show` | `void __thiscall(void *pane)` | Set `+0xB0`, update Screen state, and invalidate. | Common Pane vslot `+0x14`. |
 | `Darkages.exe:0x00492D50` | `ui_pane_hide` | `void __thiscall(void *pane)` | Clear `+0xB0` and invalidate the exposed parent region. | Common Pane vslot `+0x18`; also handles capture state. |
-| `Darkages.exe:0x004933C0` | `ui_pane_add_to_screen` | `void __thiscall(void *, const RECT *, void *, void *)` | Add this pane to Screen composition. | Pane vslot `+0x28`; delegates to `ui_screen_add_pane`. |
+| `Darkages.exe:0x004933C0` | `ui_pane_add_to_screen` | `void __thiscall(void *, const int32_t *, void *, void *)` | Add this pane to Screen composition using a client-order rectangle. | Pane vslot `+0x28`; delegates to `ui_screen_add_pane`. |
 | `Darkages.exe:0x00493480` | `ui_pane_remove_from_screen` | `void __thiscall(void *)` | Remove this pane from Screen composition. | Pane vslot `+0x2C`; delegates to `ui_screen_remove_pane`. |
 | `Darkages.exe:0x00493530` | `ui_pane_register_events` | `void __thiscall(void *, void *, int)` | Register this pane for event traversal. | Pane vslot `+0x30`; the signature xrefs enumerate compatible vtables. |
 | `Darkages.exe:0x004935D0` | `ui_pane_unregister_events` | `void __thiscall(void *)` | Unregister this pane from event traversal. | Pane vslot `+0x34`. |

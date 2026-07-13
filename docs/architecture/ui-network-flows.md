@@ -136,12 +136,14 @@ The phrases are loaded from `SpellBook.cfg` and matched against the current spel
 
 ### Runtime observation roots and useful fields
 
+The [Runtime UI Memory Map](../appendices/runtime-ui-memory-map.md) gives the complete read-only Screen and Event tree traversal, vtable discriminators, field layouts, and stable snapshot procedure.
+
 The virtual addresses below assume image base `0x00400000`. External tools should use `loaded_module_base + RVA`.
 
 | VA | RVA | Current IDA name | Object and useful chain |
 |---:|---:|---|---|
 | `Darkages.exe:0x004E2D70` | `0x000E2D70` | `ui_bulletin_session` | Active heap `BulletinSession`, or null. Child history begins at `+0xF8`, current index is `+0xF5`, active child is `+0x120`, request-wait flag is `+0x124`. |
-| `Darkages.exe:0x004E32A4` | `0x000E32A4` | `ui_equip_pane` | Persistent heap User Equip pane. Equipment identifiers begin at `+0xB22`; names are `0x80`-byte records beginning at `+0xB3E`; embedded legend/details owner begins at `+0x11CC`. |
+| `Darkages.exe:0x004E32A4` | `0x000E32A4` | `ui_equip_pane` | Persistent heap User Equip pane. Slot 1 through 13 identifiers are at `+0xB22 + 2 * slot`; names are `0x80`-byte records at `+0xB3E + 0x80 * (slot - 1)`; embedded legend/details ownership begins at `+0x11CC`. |
 | `Darkages.exe:0x004E3564` | `0x000E3564` | `ui_users_dialog_pane` | Heap Users Dialog Pane, or null before first `CWho`. It is reused across `SShowUsers` replies. |
 | GameButtons owner field `+0x124` | dynamic | current content pane | Points at the currently selected status, chat, equipment, skill, or spell content pane. Find the owner through the Screen or Event registry. |
 | GameButtons owner fields `+0x130` through `+0x140` | dynamic | content pane pointers | `+0x130` chat, `+0x134` status, `+0x138` equipment, `+0x13C` skill inventory, `+0x140` spell inventory. |
